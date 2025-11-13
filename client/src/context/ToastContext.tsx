@@ -88,15 +88,18 @@ export const ToastProvider: React.FC<ToastProviderProps> = ({ children }) => {
       
       {/* Toast Container */}
       {toasts.length > 0 && (
-        <YStack
-          position="fixed"
-          top="$4"
-          right="$4"
-          space="$2"
-          zIndex={9999}
-          pointerEvents="none"
-          maxWidth={400}
-          $xs={{ maxWidth: '90%', right: '5%' }}
+        <div
+          style={{
+            position: 'fixed',
+            top: '16px',
+            right: '16px',
+            zIndex: 9999,
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '8px',
+            pointerEvents: 'none',
+            maxWidth: '400px',
+          }}
         >
           {toasts.map((toast: Toast) => (
             <Card
@@ -145,7 +148,7 @@ export const ToastProvider: React.FC<ToastProviderProps> = ({ children }) => {
               </YStack>
             </Card>
           ))}
-        </YStack>
+        </div>
       )}
     </ToastContext.Provider>
   );

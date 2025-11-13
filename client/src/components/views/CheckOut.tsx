@@ -53,6 +53,7 @@ const CheckOut: React.FC<CheckOutProps> = ({ onNavigate, prefilledDaanaId }) => 
     if (prefilledDaanaId) {
       handleUnitLookup(prefilledDaanaId);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [prefilledDaanaId]);
 
   const resetForm = () => {
