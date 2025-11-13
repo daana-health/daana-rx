@@ -42,6 +42,7 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({
           enterStyle={{ opacity: 0 }}
           exitStyle={{ opacity: 0 }}
           backgroundColor="rgba(0,0,0,0.4)"
+          // @ts-ignore - Dialog.Overlay doesn't support position in types
           position="fixed"
           inset={0}
           zIndex={50}

@@ -64,6 +64,7 @@ const Toast: React.FC<ToastProps> = ({
 
   return (
     <YStack
+      // @ts-ignore - YStack doesn't support position="fixed" in types
       position="fixed"
       top="$4"
       right="$4"
