@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Camera Test - DaanaRX</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+        .status {
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 5px;
+            font-weight: 500;
+        }
+        .status.info { background: #e3f2fd; color: #1976d2; }
+        .status.success { background: #e8f5e9; color: #388e3c; }
+        .status.error { background: #ffebee; color: #d32f2f; }
+        .status.warning { background: #fff3e0; color: #f57c00; }
+        video {
+            width: 100%;
+            max-width: 640px;
+            height: auto;
+            background: #000;
+            border-radius: 5px;
+            margin: 20px 0;
+            display: none;
+        }
+        video.active {
+            display: block;
+        }
+        button {
+            background: #1976d2;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            font-size: 16px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #1565c0;
+        }
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        .info-box {
+            background: #f5f5f5;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 15px 0;
+            font-size: 14px;
+        }
+        .info-box h3 {
+            margin-top: 0;
+            color: #555;
+        }
+        ul {
+            margin: 10px 0;
+            padding-left: 20px;
+        }
+        code {
+            background: #f5f5f5;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📹 Camera Test Page</h1>
+        <p>Use this page to test if your camera works in the browser.</p>
+
+        <div id="status" class="status info">
+            Click "Test Camera" to begin...
+        </div>
+
+        <button id="testBtn" onclick="testCamera()">Test Camera</button>
+        <button id="stopBtn" onclick="stopCamera()" style="display:none;">Stop Camera</button>
+
+        <video id="video" autoplay playsinline></video>
+
+        <div id="details" class="info-box" style="display:none;">
+            <h3>Camera Details:</h3>
+            <div id="cameraInfo"></div>
+        </div>
+
+        <div class="info-box">
+            <h3>✅ If Camera Works Here:</h3>
+            <ul>
+                <li>Go back to DaanaRX and click the scan button</li>
+                <li>Click "Allow" when your browser asks for camera permission</li>
+                <li>Refresh the page if needed</li>
+            </ul>
+
+            <h3>❌ If Camera Doesn't Work:</h3>
+            <ul>
+                <li><strong>Chrome:</strong> Check address bar for camera icon → Allow</li>
+                <li><strong>Safari:</strong> Safari menu → Settings for This Website → Camera → Allow</li>
+                <li><strong>Firefox:</strong> Click lock icon → Clear camera permission → Allow when prompted</li>
+                <li><strong>HTTPS Required:</strong> Make sure URL starts with <code>https://</code></li>
+                <li><strong>System Settings:</strong> Check OS camera permissions for your browser</li>
+                <li><strong>Other Apps:</strong> Close Zoom, Teams, or other apps using camera</li>
+            </ul>
+
+            <h3>💡 Alternative:</h3>
+            <p>You can always use manual entry instead of camera scanning!</p>
+        </div>
+    </div>
+
+    <script>
+        let stream = null;
+        const video = document.getElementById('video');
+        const statusDiv = document.getElementById('status');
+        const testBtn = document.getElementById('testBtn');
+        const stopBtn = document.getElementById('stopBtn');
+        const details = document.getElementById('details');
+        const cameraInfo = document.getElementById('cameraInfo');
+
+        function updateStatus(message, type) {
+            statusDiv.textContent = message;
+            statusDiv.className = `status ${type}`;
+        }
+
+        async function testCamera() {
+            try {
+                updateStatus('🔍 Checking browser support...', 'info');
+
+                // Check browser support
+                if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                    updateStatus('❌ Camera API not supported in this browser', 'error');
+                    return;
+                }
+
+                // Check HTTPS
+                if (window.location.protocol !== 'https:' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+                    updateStatus('⚠️ Warning: Camera requires HTTPS in production', 'warning');
+                }
+
+                updateStatus('📷 Checking for cameras...', 'info');
+
+                // Check for cameras
+                const devices = await navigator.mediaDevices.enumerateDevices();
+                const cameras = devices.filter(d => d.kind === 'videoinput');
+
+                if (cameras.length === 0) {
+                    updateStatus('❌ No camera found on this device', 'error');
+                    return;
+                }
+
+                updateStatus(`📸 Requesting access to camera...`, 'info');
+
+                // Request camera access
+                stream = await navigator.mediaDevices.getUserMedia({
+                    video: true,
+                    audio: false
+                });
+
+                // Show video
+                video.srcObject = stream;
+                video.classList.add('active');
+                
+                // Update UI
+                updateStatus('✅ Camera working! You can see the video feed above.', 'success');
+                testBtn.style.display = 'none';
+                stopBtn.style.display = 'inline-block';
+
+                // Show camera details
+                const videoTrack = stream.getVideoTracks()[0];
+                const settings = videoTrack.getSettings();
+                
+                details.style.display = 'block';
+                cameraInfo.innerHTML = `
+                    <strong>Label:</strong> ${videoTrack.label}<br>
+                    <strong>Resolution:</strong> ${settings.width}x${settings.height}<br>
+                    <strong>Frame Rate:</strong> ${settings.frameRate} fps<br>
+                    <strong>Device ID:</strong> ${settings.deviceId?.substring(0, 20)}...
+                `;
+
+                console.log('✅ Camera test successful');
+                console.log('Camera settings:', settings);
+                console.log('Available cameras:', cameras);
+
+            } catch (error) {
+                console.error('❌ Camera test failed:', error);
+                
+                let errorMessage = '❌ ';
+                if (error.name === 'NotAllowedError') {
+                    errorMessage += 'Camera access denied. Please click "Allow" when prompted.';
+                } else if (error.name === 'NotFoundError') {
+                    errorMessage += 'No camera found. Please connect a camera.';
+                } else if (error.name === 'NotReadableError') {
+                    errorMessage += 'Camera is in use by another application.';
+                } else if (error.name === 'OverconstrainedError') {
+                    errorMessage += 'Camera constraints not supported.';
+                } else if (error.name === 'SecurityError') {
+                    errorMessage += 'Camera access blocked by security policy (HTTPS required).';
+                } else {
+                    errorMessage += `Camera error: ${error.message}`;
+                }
+                
+                updateStatus(errorMessage, 'error');
+            }
+        }
+
+        function stopCamera() {
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+                stream = null;
+            }
+            video.srcObject = null;
+            video.classList.remove('active');
+            testBtn.style.display = 'inline-block';
+            stopBtn.style.display = 'none';
+            details.style.display = 'none';
+            updateStatus('Camera stopped. Click "Test Camera" to try again.', 'info');
+        }
+
+        // Auto-detect browser
+        window.addEventListener('load', () => {
+            const ua = navigator.userAgent;
+            let browser = 'Unknown';
+            if (ua.includes('Chrome')) browser = 'Chrome';
+            else if (ua.includes('Safari')) browser = 'Safari';
+            else if (ua.includes('Firefox')) browser = 'Firefox';
+            else if (ua.includes('Edge')) browser = 'Edge';
+            
+            console.log('🌐 Browser:', browser);
+            console.log('🔒 Protocol:', window.location.protocol);
+            console.log('📍 Hostname:', window.location.hostname);
+        });
+    </script>
+</body>
+</html>
+

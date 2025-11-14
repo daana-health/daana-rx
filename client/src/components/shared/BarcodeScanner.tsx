@@ -45,37 +45,65 @@ const BarcodeScanner: React.FC<BarcodeScannerProps> = ({
         return;
       }
 
-      // Request camera permission with basic constraints first
+      console.log('🎥 Requesting camera access...');
+
+      // Check for HTTPS (required for camera access on deployed sites)
+      if (window.location.protocol !== 'https:' && window.location.hostname !== 'localhost') {
+        setError('Camera access requires HTTPS. Please access the site via https://');
+        return;
+      }
+
+      // First, enumerate devices to check if any cameras exist
+      const initialDevices = await navigator.mediaDevices.enumerateDevices();
+      const hasCameras = initialDevices.some(device => device.kind === 'videoinput');
+      
+      if (!hasCameras) {
+        setError('No camera detected on this device. Please ensure your device has a camera and try again.');
+        return;
+      }
+
+      console.log(`📷 Found ${initialDevices.filter(d => d.kind === 'videoinput').length} camera(s)`);
+
+      // Request camera permission
       let tempStream: MediaStream | null = null;
       try {
+        // Use simpler constraints for better compatibility
         tempStream = await navigator.mediaDevices.getUserMedia({ 
-          video: { 
-            facingMode: 'environment' // Prefer back camera on mobile
-          } 
+          video: true,
+          audio: false
         });
         
-        // Stop the temporary stream after getting permission
+        console.log('✅ Camera permission granted');
+        
+        // Keep the stream alive briefly to ensure proper enumeration
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
+        // Stop the temporary stream
         tempStream.getTracks().forEach(track => track.stop());
       } catch (permErr: any) {
-        console.error('Permission error:', permErr);
+        console.error('❌ Permission error:', permErr);
         if (permErr.name === 'NotAllowedError' || permErr.name === 'PermissionDeniedError') {
-          setError('Camera access denied. Please allow camera access in your browser settings and refresh the page.');
+          setError('Camera access denied. Click the camera icon in your browser address bar and allow camera access, then refresh the page.');
         } else if (permErr.name === 'NotFoundError' || permErr.name === 'DevicesNotFoundError') {
-          setError('No camera found. Please connect a camera and try again.');
+          setError('No camera found. Please connect a camera and refresh the page.');
         } else if (permErr.name === 'NotReadableError' || permErr.name === 'TrackStartError') {
-          setError('Camera is already in use by another application. Please close other apps using the camera.');
+          setError('Camera is in use by another application. Please close other apps and try again.');
+        } else if (permErr.name === 'OverconstrainedError') {
+          setError('Camera constraints not supported. Please try a different camera.');
         } else {
-          setError(`Error accessing camera: ${permErr.message || permErr.name}`);
+          setError(`Camera error: ${permErr.message || permErr.name}. Please check your browser settings.`);
         }
         return;
       }
       
-      // Get available video devices (now that we have permission, labels will be available)
+      // Get available video devices (now with labels after permission granted)
       const allDevices = await navigator.mediaDevices.enumerateDevices();
       const videoDevices = allDevices.filter(device => device.kind === 'videoinput');
       
+      console.log('📹 Available cameras:', videoDevices.map(d => ({ id: d.deviceId.substring(0, 8), label: d.label })));
+      
       if (videoDevices.length === 0) {
-        setError('No camera found. Please connect a camera and try again.');
+        setError('No camera devices found. Please ensure camera permissions are granted and refresh the page.');
         return;
       }
 
@@ -87,21 +115,21 @@ const BarcodeScanner: React.FC<BarcodeScannerProps> = ({
         return label.includes('back') || label.includes('rear') || label.includes('environment');
       });
       
-      // Fallback: prefer camera with "facingMode: environment" constraint
       const deviceId = backCamera?.deviceId || videoDevices[0].deviceId;
+      console.log(`📸 Using camera: ${videoDevices.find(d => d.deviceId === deviceId)?.label || 'Default camera'}`);
       setSelectedDeviceId(deviceId);
       
       startScanning(deviceId);
     } catch (err: any) {
-      console.error('Error initializing scanner:', err);
+      console.error('❌ Error initializing scanner:', err);
       if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
-        setError('Camera access denied. Please allow camera access in your browser settings.');
+        setError('Camera access denied. Please allow camera access in your browser settings and refresh.');
       } else if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
-        setError('No camera found. Please connect a camera and try again.');
+        setError('No camera found. Please ensure your device has a camera.');
       } else if (err.name === 'NotReadableError' || err.name === 'TrackStartError') {
-        setError('Camera is already in use. Please close other applications using the camera.');
+        setError('Camera is in use by another application.');
       } else {
-        setError('Error accessing camera: ' + (err.message || err.name));
+        setError(`Camera initialization failed: ${err.message || err.name}`);
       }
     }
   };
