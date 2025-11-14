@@ -43,7 +43,7 @@ export async function checkOutUnit(
   const { data: transaction, error: transactionError } = await supabaseServer
     .from('transactions')
     .insert({
-      type: 'check out',
+      type: 'check_out',
       quantity: input.quantity,
       unit_id: input.unitId,
       patient_reference_id: input.patientReferenceId,
@@ -95,11 +95,6 @@ export async function getTransactions(
     query = query.eq('unit_id', unitId);
   }
 
-  // Add search filter if provided
-  if (search) {
-    query = query.or(`notes.ilike.%${search}%,patient_reference_id.ilike.%${search}%`);
-  }
-
   // Add pagination
   const from = (page - 1) * pageSize;
   const to = from + pageSize - 1;
@@ -107,13 +102,39 @@ export async function getTransactions(
 
   const { data: transactions, error, count } = await query;
 
+  // Apply fuzzy search filtering on the client side for joined fields
+  let filteredTransactions = transactions || [];
+  if (search && filteredTransactions.length > 0) {
+    const searchLower = search.toLowerCase();
+    filteredTransactions = filteredTransactions.filter((tx: any) => {
+      return (
+        // Search in notes
+        (tx.notes && tx.notes.toLowerCase().includes(searchLower)) ||
+        // Search in patient reference ID
+        (tx.patient_reference_id && tx.patient_reference_id.toLowerCase().includes(searchLower)) ||
+        // Search in transaction type
+        (tx.type && tx.type.toLowerCase().includes(searchLower)) ||
+        // Search in quantity (convert to string)
+        (tx.quantity && tx.quantity.toString().includes(searchLower)) ||
+        // Search in user name
+        (tx.user && tx.user.username && tx.user.username.toLowerCase().includes(searchLower)) ||
+        (tx.user && tx.user.email && tx.user.email.toLowerCase().includes(searchLower)) ||
+        // Search in drug/medication name
+        (tx.unit && tx.unit.drug && tx.unit.drug.medication_name && 
+          tx.unit.drug.medication_name.toLowerCase().includes(searchLower)) ||
+        (tx.unit && tx.unit.drug && tx.unit.drug.generic_name && 
+          tx.unit.drug.generic_name.toLowerCase().includes(searchLower))
+      );
+    });
+  }
+
   if (error) {
     throw new Error(`Failed to get transactions: ${error.message}`);
   }
 
   return {
-    transactions: transactions?.map(formatTransaction) || [],
-    total: count || 0,
+    transactions: filteredTransactions.map(formatTransaction),
+    total: search ? filteredTransactions.length : (count || 0),
     page,
     pageSize,
   };

@@ -3,7 +3,7 @@
 
 export type UserRole = 'superadmin' | 'admin' | 'employee';
 export type TempType = 'fridge' | 'room temp';
-export type TransactionType = 'adjust' | 'check out' | 'check in';
+export type TransactionType = 'adjust' | 'check_out' | 'check_in';
 export type StrengthUnit = string; // mg, g, mcg, etc.
 export type DrugForm = string; // tablet, capsule, liquid, etc.
 

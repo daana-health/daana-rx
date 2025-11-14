@@ -308,8 +308,8 @@ export default function ScanPage() {
                       <Table.Tr key={tx.transactionId}>
                         <Table.Td>{new Date(tx.timestamp).toLocaleString()}</Table.Td>
                         <Table.Td>
-                          <Badge color={tx.type === 'check in' ? 'green' : 'blue'}>
-                            {tx.type}
+                          <Badge color={tx.type === 'check_in' ? 'green' : 'blue'}>
+                            {tx.type.replace('_', ' ')}
                           </Badge>
                         </Table.Td>
                         <Table.Td>{tx.quantity}</Table.Td>

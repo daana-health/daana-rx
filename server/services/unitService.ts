@@ -57,7 +57,7 @@ export async function createUnit(
 
   // Create check-in transaction
   await supabaseServer.from('transactions').insert({
-    type: 'check in',
+    type: 'check_in',
     quantity: input.totalQuantity,
     unit_id: unit.unit_id,
     user_id: userId,
@@ -110,15 +110,6 @@ export async function getUnits(
     `, { count: 'exact' })
     .eq('clinic_id', clinicId);
 
-  // Add search filter if provided
-  if (search) {
-    query = query.or(`
-      optional_notes.ilike.%${search}%,
-      drug.generic_name.ilike.%${search}%,
-      drug.medication_name.ilike.%${search}%
-    `);
-  }
-
   // Add pagination
   const from = (page - 1) * pageSize;
   const to = from + pageSize - 1;
@@ -130,9 +121,36 @@ export async function getUnits(
     throw new Error(`Failed to get units: ${error.message}`);
   }
 
+  // Apply fuzzy search filtering on the client side for joined fields
+  let filteredUnits = units || [];
+  if (search && filteredUnits.length > 0) {
+    const searchLower = search.toLowerCase();
+    filteredUnits = filteredUnits.filter((unit: any) => {
+      return (
+        // Search in notes
+        (unit.optional_notes && unit.optional_notes.toLowerCase().includes(searchLower)) ||
+        // Search in drug names
+        (unit.drug && unit.drug.medication_name && unit.drug.medication_name.toLowerCase().includes(searchLower)) ||
+        (unit.drug && unit.drug.generic_name && unit.drug.generic_name.toLowerCase().includes(searchLower)) ||
+        (unit.drug && unit.drug.ndc_id && unit.drug.ndc_id.toLowerCase().includes(searchLower)) ||
+        (unit.drug && unit.drug.form && unit.drug.form.toLowerCase().includes(searchLower)) ||
+        // Search in lot source
+        (unit.lot && unit.lot.source && unit.lot.source.toLowerCase().includes(searchLower)) ||
+        (unit.lot && unit.lot.note && unit.lot.note.toLowerCase().includes(searchLower)) ||
+        // Search in unit ID
+        (unit.unit_id && unit.unit_id.toLowerCase().includes(searchLower)) ||
+        // Search in quantity (convert to string)
+        (unit.available_quantity && unit.available_quantity.toString().includes(searchLower)) ||
+        (unit.total_quantity && unit.total_quantity.toString().includes(searchLower)) ||
+        // Search in user
+        (unit.user && unit.user.username && unit.user.username.toLowerCase().includes(searchLower))
+      );
+    });
+  }
+
   return {
-    units: units?.map(formatUnit) || [],
-    total: count || 0,
+    units: filteredUnits.map(formatUnit),
+    total: search ? filteredUnits.length : (count || 0),
     page,
     pageSize,
   };
@@ -278,7 +296,7 @@ export async function getDashboardStats(clinicId: string) {
     .from('transactions')
     .select('*', { count: 'exact', head: true })
     .eq('clinic_id', clinicId)
-    .eq('type', 'check in')
+    .eq('type', 'check_in')
     .gte('timestamp', sevenDaysAgo.toISOString());
 
   // Get recent check-outs (last 7 days)
@@ -286,7 +304,7 @@ export async function getDashboardStats(clinicId: string) {
     .from('transactions')
     .select('*', { count: 'exact', head: true })
     .eq('clinic_id', clinicId)
-    .eq('type', 'check out')
+    .eq('type', 'check_out')
     .gte('timestamp', sevenDaysAgo.toISOString());
 
   // Get low stock alerts (available < 10% of total)

@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { useLazyQuery, useMutation, gql } from '@apollo/client';
 import {
   Stack,
@@ -69,7 +70,8 @@ const CHECK_OUT_UNIT = gql`
   }
 `;
 
-export default function CheckOutPage() {
+function CheckOutContent() {
+  const searchParams = useSearchParams();
   const [unitId, setUnitId] = useState('');
   const [selectedUnit, setSelectedUnit] = useState<UnitData | null>(null);
   const [quantity, setQuantity] = useState<number>(0);
@@ -178,6 +180,15 @@ export default function CheckOutPage() {
     setUnitId(code);
     getUnit({ variables: { unitId: code } });
   };
+
+  // Auto-populate unitId from URL params (e.g., from Quick Check-Out button)
+  useEffect(() => {
+    const unitIdParam = searchParams?.get('unitId');
+    if (unitIdParam) {
+      setUnitId(unitIdParam);
+      getUnit({ variables: { unitId: unitIdParam } });
+    }
+  }, [searchParams, getUnit]);
 
   return (
     <AppShell>
@@ -362,5 +373,13 @@ export default function CheckOutPage() {
         />
       </Stack>
     </AppShell>
+  );
+}
+
+export default function CheckOutPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <CheckOutContent />
+    </Suspense>
   );
 }

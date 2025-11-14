@@ -45,7 +45,7 @@ export interface UnitData {
 export interface TransactionData {
   transactionId: string;
   timestamp: string;
-  type: 'check in' | 'check out' | 'adjust';
+  type: 'check_in' | 'check_out' | 'adjust';
   quantity: number;
   notes?: string | null;
   patientReferenceId?: string | null;

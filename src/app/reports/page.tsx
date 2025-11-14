@@ -60,7 +60,7 @@ export default function ReportsPage() {
 
         <Card shadow="sm" padding="lg" radius="md" withBorder>
           <TextInput
-            placeholder="Search by notes or patient reference..."
+            placeholder="Search transactions (medication, user, type, quantity, notes, patient ref...)"
             value={search}
             onChange={(e) => {
               setSearch(e.target.value);
@@ -92,14 +92,14 @@ export default function ReportsPage() {
                       <Table.Td>
                         <Badge
                           color={
-                            tx.type === 'check in'
+                            tx.type === 'check_in'
                               ? 'green'
-                              : tx.type === 'check out'
+                              : tx.type === 'check_out'
                               ? 'blue'
                               : 'orange'
                           }
                         >
-                          {tx.type}
+                          {tx.type.replace('_', ' ')}
                         </Badge>
                       </Table.Td>
                       <Table.Td>{tx.quantity}</Table.Td>
