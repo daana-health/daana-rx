@@ -17,7 +17,9 @@ import {
 } from '@mantine/core';
 import { notifications } from '@mantine/notifications';
 import { AppShell } from '../../components/layout/AppShell';
+import { QRScanner } from '../../components/QRScanner';
 import { GetUnitResponse, SearchUnitsResponse, UnitData } from '../../types/graphql';
+import { IconQrcode } from '@tabler/icons-react';
 
 const GET_UNIT = gql`
   query GetUnit($unitId: ID!) {
@@ -73,6 +75,7 @@ export default function CheckOutPage() {
   const [quantity, setQuantity] = useState<number>(0);
   const [patientReference, setPatientReference] = useState('');
   const [notes, setNotes] = useState('');
+  const [showQRScanner, setShowQRScanner] = useState(false);
 
   const [getUnit, { loading: loadingUnit }] = useLazyQuery<GetUnitResponse>(GET_UNIT, {
     onCompleted: (data) => {
@@ -170,6 +173,12 @@ export default function CheckOutPage() {
     setNotes('');
   };
 
+  const handleQRScanned = (code: string) => {
+    setShowQRScanner(false);
+    setUnitId(code);
+    getUnit({ variables: { unitId: code } });
+  };
+
   return (
     <AppShell>
       <Stack gap="xl">
@@ -182,9 +191,19 @@ export default function CheckOutPage() {
 
         <Card shadow="sm" padding="lg" radius="md" withBorder>
           <Stack>
+            <Group>
+              <Button
+                leftSection={<IconQrcode size={16} />}
+                onClick={() => setShowQRScanner(true)}
+                fullWidth
+              >
+                Scan QR Code
+              </Button>
+            </Group>
+
             <TextInput
-              label="Unit ID or QR Code"
-              placeholder="Enter unit ID or scan QR code"
+              label="Unit ID"
+              placeholder="Enter unit ID manually"
               value={unitId}
               onChange={(e) => setUnitId(e.target.value)}
               onKeyPress={(e) => {
@@ -333,6 +352,14 @@ export default function CheckOutPage() {
             </Stack>
           </Card>
         )}
+
+        <QRScanner
+          opened={showQRScanner}
+          onClose={() => setShowQRScanner(false)}
+          onScan={handleQRScanned}
+          title="Scan DaanaRx QR Code"
+          description="Scan the QR code on the medication unit to check it out"
+        />
       </Stack>
     </AppShell>
   );

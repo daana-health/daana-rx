@@ -3,10 +3,11 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSelector, useDispatch } from 'react-redux';
-import { AppShell as MantineAppShell, Burger, Group, NavLink, Text, Button } from '@mantine/core';
+import { AppShell as MantineAppShell, Burger, Group, NavLink, Text, Button, Loader, Center } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
 import { RootState } from '../../store';
 import { restoreAuth, logout } from '../../store/authSlice';
+import { useAuth } from '../../hooks/useAuth';
 import {
   IconHome,
   IconPackageImport,
@@ -27,52 +28,29 @@ export function AppShell({ children }: AppShellProps) {
   const [opened, { toggle }] = useDisclosure();
   const router = useRouter();
   const dispatch = useDispatch();
-  const { isAuthenticated, user, clinic, expiresAt, hasHydrated } = useSelector(
-    (state: RootState) => state.auth
-  );
+  const { user, clinic } = useSelector((state: RootState) => state.auth);
+  const { isAuthenticated, hasHydrated } = useAuth();
 
   useEffect(() => {
     dispatch(restoreAuth());
   }, [dispatch]);
-
-  useEffect(() => {
-    if (!hasHydrated) {
-      return;
-    }
-
-    if (!isAuthenticated) {
-      router.push('/auth/signin');
-    }
-  }, [hasHydrated, isAuthenticated, router]);
-
-  useEffect(() => {
-    if (!expiresAt) {
-      return;
-    }
-
-    const remaining = expiresAt - Date.now();
-
-    if (remaining <= 0) {
-      dispatch(logout());
-      return;
-    }
-
-    const timeoutId = window.setTimeout(() => {
-      dispatch(logout());
-    }, remaining);
-
-    return () => {
-      window.clearTimeout(timeoutId);
-    };
-  }, [dispatch, expiresAt]);
 
   const handleLogout = () => {
     dispatch(logout());
     router.push('/auth/signin');
   };
 
+  const handleNavigation = (href: string) => {
+    router.push(href);
+    if (opened) toggle();
+  };
+
   if (!hasHydrated) {
-    return null;
+    return (
+      <Center h="100vh">
+        <Loader size="lg" />
+      </Center>
+    );
   }
 
   if (!isAuthenticated) {
@@ -131,13 +109,9 @@ export function AppShell({ children }: AppShellProps) {
         {navItems.map((item) => (
           <NavLink
             key={item.href}
-            href={item.href}
             label={item.label}
             leftSection={<item.icon size={20} />}
-            onClick={() => {
-              router.push(item.href);
-              if (opened) toggle();
-            }}
+            onClick={() => handleNavigation(item.href)}
           />
         ))}
       </MantineAppShell.Navbar>

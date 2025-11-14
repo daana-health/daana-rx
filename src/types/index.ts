@@ -70,6 +70,8 @@ export interface Unit {
   qrCode?: string;
   optionalNotes?: string;
   clinicId: string;
+  lot: Lot;
+  user: User;
 }
 
 export interface Transaction {

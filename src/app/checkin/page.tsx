@@ -20,6 +20,8 @@ import { DateInput } from '@mantine/dates';
 import { notifications } from '@mantine/notifications';
 import { AppShell } from '../../components/layout/AppShell';
 import { QRCodeSVG } from 'qrcode.react';
+import { BarcodeScanner } from '../../components/BarcodeScanner';
+import { IconQrcode } from '@tabler/icons-react';
 import {
   GetLocationsResponse,
   GetLotsResponse,
@@ -118,6 +120,9 @@ export default function CheckInPage() {
   const [unitNotes, setUnitNotes] = useState('');
   const [createdUnitId, setCreatedUnitId] = useState<string>('');
   const [showQRModal, setShowQRModal] = useState(false);
+  
+  // Scanner state
+  const [showBarcodeScanner, setShowBarcodeScanner] = useState(false);
 
   // Queries
   const { data: locationsData } = useQuery<GetLocationsResponse>(GET_LOCATIONS);
@@ -148,11 +153,12 @@ export default function CheckInPage() {
   });
 
   const [createUnit, { loading: creatingUnit }] = useMutation(CREATE_UNIT, {
+    refetchQueries: ['GetDashboardStats', 'GetUnits'],
     onCompleted: (data) => {
       setCreatedUnitId(data.createUnit.unitId);
       notifications.show({
         title: 'Success',
-        message: 'Unit created successfully',
+        message: `Unit created successfully! Transaction logged.`,
         color: 'green',
       });
       setShowQRModal(true);
@@ -191,11 +197,22 @@ export default function CheckInPage() {
     });
   };
 
-  const handleSearchNDC = async () => {
+  const handleSearchNDC = async (ndc?: string) => {
+    const searchCode = ndc || ndcInput;
+    if (!searchCode.trim()) {
+      notifications.show({
+        title: 'Error',
+        message: 'Please enter an NDC code',
+        color: 'red',
+      });
+      return;
+    }
+
     try {
-      const result = await searchNDC({ ndc: ndcInput });
+      const result = await searchNDC({ ndc: searchCode });
       if (result.data?.searchDrugByNDC) {
         setSelectedDrug(result.data.searchDrugByNDC);
+        setNdcInput(searchCode);
         notifications.show({
           title: 'Found',
           message: `Found: ${result.data.searchDrugByNDC.medicationName}`,
@@ -215,6 +232,11 @@ export default function CheckInPage() {
         color: 'red',
       });
     }
+  };
+
+  const handleBarcodeScanned = (code: string) => {
+    setShowBarcodeScanner(false);
+    handleSearchNDC(code);
   };
 
   const handleCreateUnit = () => {
@@ -346,13 +368,28 @@ export default function CheckInPage() {
           <Stepper.Step label="Find Drug" description="NDC or manual entry">
             <Card shadow="sm" padding="lg" radius="md" withBorder mt="md">
               <Stack>
+                <Group>
+                  <Button
+                    leftSection={<IconQrcode size={16} />}
+                    onClick={() => setShowBarcodeScanner(true)}
+                    fullWidth
+                  >
+                    Scan Barcode
+                  </Button>
+                </Group>
+
                 <TextInput
                   label="NDC Barcode"
                   placeholder="Enter NDC code"
                   value={ndcInput}
                   onChange={(e) => setNdcInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      handleSearchNDC();
+                    }
+                  }}
                   rightSection={
-                    <Button size="xs" onClick={handleSearchNDC}>
+                    <Button size="xs" onClick={() => handleSearchNDC()}>
                       Search
                     </Button>
                   }
@@ -498,6 +535,14 @@ export default function CheckInPage() {
             </Group>
           </Stack>
         </Modal>
+
+        <BarcodeScanner
+          opened={showBarcodeScanner}
+          onClose={() => setShowBarcodeScanner(false)}
+          onScan={handleBarcodeScanned}
+          title="Scan NDC Barcode"
+          description="Position the NDC barcode within the frame to search for drug information"
+        />
       </Stack>
     </AppShell>
   );

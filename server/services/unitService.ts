@@ -21,7 +21,7 @@ export async function createUnit(
     throw new Error('Either drugId or drugData must be provided');
   }
 
-  // Create the unit
+  // Create the unit (qr_code will be the unitId itself, set after insertion)
   const { data: unit, error } = await supabaseServer
     .from('units')
     .insert({
@@ -45,6 +45,15 @@ export async function createUnit(
   if (error || !unit) {
     throw new Error(`Failed to create unit: ${error?.message}`);
   }
+
+  // Update the unit with its own ID as the QR code (simple and effective)
+  await supabaseServer
+    .from('units')
+    .update({ qr_code: unit.unit_id })
+    .eq('unit_id', unit.unit_id);
+
+  // Add qr_code to the returned unit
+  unit.qr_code = unit.unit_id;
 
   // Create check-in transaction
   await supabaseServer.from('transactions').insert({
@@ -217,6 +226,24 @@ function formatUnit(unit: any): Unit {
       strengthUnit: unit.drug.strength_unit,
       ndcId: unit.drug.ndc_id,
       form: unit.drug.form,
+    },
+    lot: {
+      lotId: unit.lot.lot_id,
+      source: unit.lot.source,
+      note: unit.lot.note,
+      dateCreated: new Date(unit.lot.date_created),
+      locationId: unit.lot.location_id,
+      clinicId: unit.lot.clinic_id,
+    },
+    user: {
+      userId: unit.user.user_id,
+      username: unit.user.username,
+      email: unit.user.email,
+      password: '',
+      clinicId: unit.user.clinic_id,
+      userRole: unit.user.user_role,
+      createdAt: new Date(unit.user.created_at),
+      updatedAt: new Date(unit.user.updated_at),
     },
   };
 }

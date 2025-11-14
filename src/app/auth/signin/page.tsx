@@ -1,9 +1,10 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useDispatch } from 'react-redux';
-import { TextInput, PasswordInput, Button, Paper, Title, Container, Text, Anchor, Stack } from '@mantine/core';
+import { TextInput, PasswordInput, Button, Paper, Title, Container, Text, Anchor, Stack, Alert } from '@mantine/core';
+import { IconAlertCircle } from '@tabler/icons-react';
 import { notifications } from '@mantine/notifications';
 import { useMutation, gql } from '@apollo/client';
 import { setAuth } from '../../../store/authSlice';
@@ -32,12 +33,23 @@ const SIGN_IN_MUTATION = gql`
 
 export default function SignInPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const dispatch = useDispatch();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showTimeoutAlert, setShowTimeoutAlert] = useState(false);
+
+  const [isRedirecting, setIsRedirecting] = useState(false);
+
+  useEffect(() => {
+    if (searchParams?.get('timeout') === 'true') {
+      setShowTimeoutAlert(true);
+    }
+  }, [searchParams]);
 
   const [signIn, { loading }] = useMutation(SIGN_IN_MUTATION, {
     onCompleted: (data) => {
+      setIsRedirecting(true);
       dispatch(setAuth({
         user: data.signIn.user,
         clinic: data.signIn.clinic,
@@ -50,12 +62,15 @@ export default function SignInPage() {
         color: 'green',
       });
 
-      router.push('/');
+      // Small delay to ensure state is updated
+      setTimeout(() => {
+        router.push('/');
+      }, 100);
     },
     onError: (error) => {
       notifications.show({
         title: 'Error',
-        message: error.message || 'Failed to sign in',
+        message: error.message || 'Incorrect email or password',
         color: 'red',
       });
     },
@@ -76,14 +91,28 @@ export default function SignInPage() {
       </Text>
 
       <Paper withBorder shadow="md" p={30} radius="md">
+        {showTimeoutAlert && (
+          <Alert
+            icon={<IconAlertCircle size={16} />}
+            title="Session Expired"
+            color="orange"
+            mb="md"
+            onClose={() => setShowTimeoutAlert(false)}
+            withCloseButton
+          >
+            You were logged out due to inactivity. Please sign in again.
+          </Alert>
+        )}
         <form onSubmit={handleSubmit}>
           <Stack>
             <TextInput
               label="Email"
               placeholder="your@email.com"
               required
+              type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
+              disabled={loading || isRedirecting}
             />
 
             <PasswordInput
@@ -92,10 +121,11 @@ export default function SignInPage() {
               required
               value={password}
               onChange={(e) => setPassword(e.target.value)}
+              disabled={loading || isRedirecting}
             />
 
-            <Button type="submit" fullWidth loading={loading}>
-              Sign In
+            <Button type="submit" fullWidth loading={loading || isRedirecting}>
+              {isRedirecting ? 'Redirecting...' : 'Sign In'}
             </Button>
 
             <Text size="sm" ta="center">
