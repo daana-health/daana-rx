@@ -115,7 +115,8 @@ const BarcodeScanner: React.FC<BarcodeScannerProps> = ({
         return label.includes('back') || label.includes('rear') || label.includes('environment');
       });
       
-      const deviceId = backCamera?.deviceId || videoDevices[0].deviceId;
+      // Use back camera if found, otherwise use first available camera
+      const deviceId = backCamera?.deviceId || videoDevices[0]!.deviceId;
       console.log(`📸 Using camera: ${videoDevices.find(d => d.deviceId === deviceId)?.label || 'Default camera'}`);
       setSelectedDeviceId(deviceId);
       
