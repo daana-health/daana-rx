@@ -211,7 +211,7 @@ const BarcodeScanner: React.FC<BarcodeScannerProps> = ({
             });
         };
 
-        const onError = (err: Event) => {
+        const onError = (_err: Event) => {
           video.removeEventListener('loadedmetadata', onLoadedMetadata);
           video.removeEventListener('error', onError);
           reject(new Error('Video element error'));
