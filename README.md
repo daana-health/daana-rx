@@ -1,322 +1,381 @@
-# DaanaRX - Pharmaceutical Inventory Management System
+# DaanaRx - HIPAA-Compliant Medication Tracking System
 
-A modern web application for managing pharmaceutical inventory with features for check-in, check-out, scanning, reporting, and administration. Built with React, Node.js, and Firebase.
+A comprehensive web application for non-profit clinics to track and distribute donated prescription medications.
 
-## Features
+## 🎯 Overview
 
-- 📦 **Check In/Out**: Manage stock with lot tracking and FEFO (First Expired, First Out) compliance
-- 🔍 **Scan & Lookup**: Quick unit lookup with QR code support
-- 📊 **Inventory Management**: Real-time inventory tracking with status monitoring
-- 📈 **Reports**: Transaction logs with date filtering and CSV export
-- 🏥 **RxNorm Integration**: Automatic drug information lookup via RxNorm API (NIH/NLM) with fuzzy search and autocomplete
-- 🏷️ **Label Generation**: Printable QR code labels for units
-- ⚠️ **Quarantine**: Flag units for review
-- 🌡️ **Location Management**: Track storage locations (room temp/fridge)
+DaanaRx provides:
+- **Complete Inventory Management**: Track medications from check-in to dispensing
+- **QR Code System**: Generate and scan QR codes for quick unit identification
+- **Drug Lookup**: Integrated RxNorm and FDA APIs for NDC barcode scanning
+- **Role-Based Access**: Superadmin, Admin, and Employee roles with appropriate permissions
+- **HIPAA Compliance**: Row-level security, encrypted data, audit trails
+- **Multi-Clinic Support**: Isolated data per clinic with automatic RLS policies
 
-## Technology Stack
+## 🚀 Quick Start
 
-### Frontend
-- React 18 with TypeScript
-- Tailwind CSS for styling
-- Firebase SDK for authentication and real-time data
-- Lucide React for icons
-- QRCode.js for label generation
+### Prerequisites
 
-### Backend
-- Node.js with Express
-- Firebase Admin SDK
-- CORS support
-- Environment-based configuration
+- Node.js 18+ installed
+- Supabase account (free tier works)
+- Google Cloud project (for OAuth, optional)
 
-### Database
-- Firebase Firestore (NoSQL)
+### 1. Database Setup
 
-## Prerequisites
+1. Go to your Supabase dashboard: https://cnjajswnqmzzhzoyadqa.supabase.co
+2. Navigate to **SQL Editor** in the left sidebar
+3. Open `supabase-schema.sql` file from this project
+4. Copy all contents and paste into the SQL Editor
+5. Click **Run** to execute the SQL commands
 
-Before you begin, ensure you have the following installed:
-- Node.js (v16 or higher)
-- npm (v7 or higher)
-- A Firebase account (free tier works fine)
+This will create:
+- All database tables (clinics, users, locations, lots, units, drugs, transactions)
+- Row-level security policies
+- Indexes for performance
+- Seed data with common medications
 
-## Installation & Setup
+### 2. Environment Variables
 
-### 1. Clone the Repository
-
+The `.env.local` file is already configured with:
 ```bash
-cd /Users/rithik/Code/DaanarRX
+NEXT_PUBLIC_SUPABASE_URL=https://cnjajswnqmzzhzoyadqa.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=<your-key>
+NEXT_PUBLIC_GOOGLE_CLIENT_ID=<your-client-id>
 ```
 
-### 2. Firebase Setup
-
-#### Create a Firebase Project
-
-1. Go to [Firebase Console](https://console.firebase.google.com/)
-2. Click "Add project" and follow the wizard
-3. Enable Google Analytics (optional)
-
-#### Enable Firestore Database
-
-1. In your Firebase project, go to "Build" → "Firestore Database"
-2. Click "Create database"
-3. Start in **test mode** (you can update security rules later)
-4. Choose a location close to your users
-
-#### Enable Authentication
-
-1. Go to "Build" → "Authentication"
-2. Click "Get started"
-3. Enable "Anonymous" sign-in method
-
-#### Get Firebase Configuration
-
-1. Go to Project Settings (gear icon)
-2. Scroll to "Your apps" and click the Web icon (`</>`)
-3. Register your app with a nickname (e.g., "DaanaRX Web")
-4. Copy the `firebaseConfig` object
-
-#### Download Admin SDK Key
-
-1. In Project Settings, go to "Service accounts"
-2. Click "Generate new private key"
-3. Save the JSON file as `firebase-adminsdk.json` in the `server` directory
-
-### 3. Environment Configuration
-
-#### Backend Environment
-
-Create a `.env` file in the project root:
+**Add these additional environment variables:**
 
 ```bash
-cp .env.example .env
+# Get this from Supabase Dashboard > Settings > API > service_role key
+SUPABASE_SERVICE_KEY=your_service_role_key_here
+
+# Generate a random secret for JWT tokens
+JWT_SECRET=your_random_secret_here_at_least_32_chars
+
+# Optional: For production
+ALLOWED_ORIGINS=http://localhost:3000
+NEXT_PUBLIC_GRAPHQL_URL=http://localhost:4000/graphql
 ```
 
-Edit `.env` and add your Firebase configuration:
-
-```env
-PORT=4000
-NODE_ENV=development
-
-# Note: RxNorm API from NIH/NLM is free and requires no API key
-# https://lhncbc.nlm.nih.gov/RxNav/APIs/RxNormAPIs.html
-
-# Firebase Admin SDK - path to your service account key
-FIREBASE_ADMIN_SDK_PATH=./server/firebase-adminsdk.json
-
-# Client Firebase Config (from Firebase Console)
-REACT_APP_FIREBASE_API_KEY=your_api_key_here
-REACT_APP_FIREBASE_AUTH_DOMAIN=your_project.firebaseapp.com
-REACT_APP_FIREBASE_PROJECT_ID=your_project_id
-REACT_APP_FIREBASE_STORAGE_BUCKET=your_project.appspot.com
-REACT_APP_FIREBASE_MESSAGING_SENDER_ID=your_sender_id
-REACT_APP_FIREBASE_APP_ID=your_app_id
-REACT_APP_FIREBASE_MEASUREMENT_ID=your_measurement_id
-```
-
-#### Place Admin SDK Key
-
-Move your `firebase-adminsdk.json` file to:
-```bash
-/Users/rithik/Code/DaanarRX/server/firebase-adminsdk.json
-```
-
-### 4. Install Dependencies
-
-Install all dependencies for both backend and frontend:
+### 3. Install Dependencies
 
 ```bash
-# Install root dependencies
 npm install
-
-# Install client dependencies
-cd client
-npm install
-cd ..
 ```
 
-### 5. Start the Application
+### 4. Start the Application
 
-#### Option 1: Run Both Servers Concurrently (Recommended)
+**Development mode (runs both frontend and backend):**
+```bash
+npm run dev:all
+```
 
+This starts:
+- Next.js frontend: http://localhost:3000
+- GraphQL backend: http://localhost:4000/graphql
+
+**Or run separately:**
+
+Terminal 1 - Frontend:
 ```bash
 npm run dev
 ```
 
-This will start:
-- Backend server on `http://localhost:4000`
-- React dev server on `http://localhost:3000`
-
-#### Option 2: Run Servers Separately
-
-Terminal 1 (Backend):
+Terminal 2 - Backend:
 ```bash
 npm run server
 ```
 
-Terminal 2 (Frontend):
-```bash
-npm run client
-```
+### 5. Create Your First Account
 
-### 6. Access the Application
+1. Open http://localhost:3000
+2. Click "Sign up"
+3. Enter:
+   - Your email
+   - A secure password
+   - Your clinic name
+4. You'll be automatically logged in as a **Superadmin**
 
-Open your browser and navigate to:
-```
-http://localhost:3000
-```
+## 📋 Core Features
 
-## Project Structure
+### 1. Check-In Flow
+- Create or select existing lot (donation source)
+- Search drugs by NDC barcode or manual entry
+- Create unit with quantity and expiry date
+- Generate QR code for the unit
+- Print labels
+
+### 2. Check-Out Flow
+- Scan QR code or search by unit ID
+- View unit details and available quantity
+- Dispense medication with patient reference
+- Automatic inventory updates
+- Transaction logging
+
+### 3. Scan/Lookup
+- Quick unit information lookup
+- View transaction history
+- Direct link to check-out
+
+### 4. Inventory Management
+- View all units with pagination
+- Search by drug name or notes
+- See expiry dates and stock levels
+- Color-coded status (expired, expiring soon)
+
+### 5. Reports
+- Complete transaction audit trail
+- Filter by date, type, patient reference
+- Export capabilities (future enhancement)
+
+### 6. Admin Panel
+- Create and manage storage locations
+- Set temperature requirements (fridge/room temp)
+- Delete protection for locations with inventory
+
+### 7. Settings (Superadmin)
+- Invite new users
+- Assign roles (Admin, Employee)
+- View all clinic users
+
+## 👥 User Roles
+
+### Superadmin
+- Full access to all features
+- Can edit units and transactions
+- User management
+- Location management
+
+### Admin
+- Read-only access to inventory and reports
+- Can check-in and check-out medications
+- Can create locations
+- Cannot edit existing data
+- Cannot manage users
+
+### Employee
+- Can check-in medications
+- Can check-out medications
+- Can scan/lookup units
+- View-only access to inventory
+- No access to reports, admin, or settings
+
+## 🗄️ Database Schema
+
+### Key Tables
+- **clinics**: Clinic information and branding
+- **users**: User accounts with role-based access
+- **locations**: Storage locations with temperature tracking
+- **lots**: Donation batches linked to locations
+- **drugs**: Universal drug database (cached from APIs)
+- **units**: Individual medication units in inventory
+- **transactions**: Complete audit trail of all operations
+
+### Security
+- **Row-Level Security (RLS)**: Automatic clinic data isolation
+- **Encrypted Auth**: Supabase handles password hashing
+- **JWT Tokens**: Secure session management
+- **Audit Logs**: Every transaction is recorded
+
+## 🔌 API Integration
+
+### RxNorm API
+- NDC barcode lookup
+- Drug name search
+- Strength and form information
+- **No API key required**
+
+### openFDA API
+- Fallback for NDC lookups
+- Additional drug information
+- **No API key required**
+
+### Usage
+Both APIs are called automatically when:
+1. Scanning an NDC barcode during check-in
+2. Searching drugs by generic name
+3. Results are cached in the local drugs table
+
+## 🏗️ Architecture
+
+### Frontend (Next.js 14 + React 18)
+- **App Router**: Modern Next.js file-based routing
+- **Mantine UI**: Component library for consistent design
+- **Apollo Client**: GraphQL data management
+- **Redux Toolkit**: Global state (auth, clinic)
+- **TypeScript**: Strict typing throughout
+
+### Backend (Express + Apollo Server)
+- **GraphQL API**: Single endpoint at `/graphql`
+- **Authentication**: JWT-based with Supabase Auth
+- **Middleware**: Security headers, rate limiting, CORS
+- **Services**: Business logic layer
+- **Type Safety**: Shared types between frontend and backend
+
+### Database (Supabase/PostgreSQL)
+- **Managed PostgreSQL**: Automatic backups
+- **Row-Level Security**: Built-in multi-tenancy
+- **Real-time** (optional): Can enable subscriptions
+- **Auth Integration**: Built-in user management
+
+## 📦 Project Structure
 
 ```
 DaanarRX/
-├── client/                 # React frontend
-│   ├── public/            # Static files
-│   ├── src/
-│   │   ├── components/    # React components
-│   │   │   ├── shared/   # Reusable components
-│   │   │   └── views/    # Page components
-│   │   ├── context/      # React Context (Firebase)
-│   │   ├── firebase/     # Firebase configuration
-│   │   ├── types/        # TypeScript types
-│   │   ├── App.tsx       # Main app component
-│   │   └── index.tsx     # Entry point
-│   ├── package.json
-│   └── tsconfig.json
-├── server/                # Node.js backend
-│   ├── index.js          # Express server
-│   └── firebase-adminsdk.json  # (You add this)
-├── .env                  # Environment variables (You create this)
-├── .env.example         # Example environment file
-├── package.json         # Root package.json
-└── README.md           # This file
+├── src/
+│   ├── app/                    # Next.js pages
+│   │   ├── auth/              # Sign in, sign up
+│   │   ├── checkin/           # Check-in flow
+│   │   ├── checkout/          # Check-out flow
+│   │   ├── scan/              # Scan/lookup
+│   │   ├── inventory/         # Inventory management
+│   │   ├── reports/           # Transaction logs
+│   │   ├── admin/             # Location management
+│   │   ├── settings/          # User management
+│   │   └── layout.tsx         # Root layout with providers
+│   ├── components/            # Reusable components
+│   │   └── layout/            # AppShell, Navigation
+│   ├── store/                 # Redux slices
+│   ├── lib/                   # Apollo Client, Supabase
+│   ├── types/                 # TypeScript definitions
+│   └── hooks/                 # Custom React hooks
+├── server/
+│   ├── graphql/               # Schema and resolvers
+│   ├── services/              # Business logic
+│   ├── middleware/            # Auth, error handling
+│   ├── utils/                 # Helpers
+│   └── index.ts               # Express server
+├── supabase-schema.sql        # Database initialization
+├── IMPLEMENTATION_PLAN.md     # Development roadmap
+└── package.json               # Dependencies
 ```
 
-## Firebase Security Rules
+## 🧪 Testing
 
-For production, update your Firestore security rules:
+### Manual Testing Checklist
 
-```javascript
-rules_version = '2';
-service cloud.firestore {
-  match /databases/{database}/documents {
-    // Allow authenticated users to read/write
-    match /{document=**} {
-      allow read, write: if request.auth != null;
-    }
-  }
-}
-```
+#### Authentication
+- [ ] Sign up creates new clinic and superadmin user
+- [ ] Sign in with existing credentials
+- [ ] Logout clears session
 
-## API Endpoints
+#### Check-In
+- [ ] Create new location
+- [ ] Create new lot with location
+- [ ] Search drug by NDC barcode
+- [ ] Manual drug entry
+- [ ] Create unit with all required fields
+- [ ] QR code generates successfully
 
-The backend provides the following endpoints:
+#### Check-Out
+- [ ] Search unit by ID
+- [ ] Search unit by QR code
+- [ ] Dispense reduces available quantity
+- [ ] Cannot dispense more than available
+- [ ] Transaction is created
 
-- `GET /api/health` - Health check
-- `GET /api/ndc/:ndc` - Lookup NDC code with fuzzy matching (supports multiple NDC formats)
-- `GET /api/search/generic/:name` - Search drugs by generic name via RxNorm API (NIH/NLM)
-- `GET /api/unit/:daanaId` - Lookup unit by Daana ID
+#### Role-Based Access
+- [ ] Superadmin can edit data
+- [ ] Admin cannot edit data
+- [ ] Employee cannot access reports/settings
+- [ ] Settings page only visible to superadmin
 
-**RxNorm API Features:**
-- Free API from National Library of Medicine (no API key required)
-- Fuzzy search with approximate term matching
-- Comprehensive drug database with RXCUI identifiers
-- Auto-complete support for drug name search
+### Future Enhancements
+- Unit tests with Jest
+- Integration tests with Cypress
+- E2E testing for critical flows
 
-## Usage Guide
+## 🚨 Troubleshooting
 
-### Initial Setup
+### "User record not found" error
+- Make sure you ran `supabase-schema.sql` in Supabase
+- Check that RLS policies are enabled
+- Verify SUPABASE_SERVICE_KEY is set correctly
 
-1. **Add Locations**: Go to Admin → Add storage locations (e.g., "Shelf A-1", "Fridge-1")
-2. **Check In Stock**:
-   - Create a new lot (date, source/donor)
-   - Scan NDC barcode or enter manually
-   - Add unit details (quantity, expiry, location)
-   - Print the generated label
+### GraphQL endpoint not connecting
+- Ensure backend server is running (`npm run server`)
+- Check NEXT_PUBLIC_GRAPHQL_URL in `.env.local`
+- Verify port 4000 is not in use
 
-### Daily Operations
+### TypeScript errors
+- Run `npm install` to ensure all dependencies are installed
+- Check that `@types/*` packages are in devDependencies
+- Verify TypeScript version is 5.6+
 
-- **Check Out**: Scan unit QR code, enter quantity and patient reference
-- **Scan/Lookup**: Quickly find unit information
-- **Inventory**: View all units, export to CSV, quarantine items
-- **Reports**: View transaction log, filter by date, export to CSV
+### Camera access denied for barcode scanning
+- Barcode scanning requires HTTPS in production
+- Use localhost for development
+- Check browser permissions
 
-### FEFO Compliance
+## 📝 Development Notes
 
-The system automatically checks for older units when checking out and warns if a unit with an earlier expiration date is available.
+### Zero TypeScript Errors
+This project has **zero TypeScript compilation errors** with strict mode enabled.
 
-## Troubleshooting
+### API Rate Limiting
+- GraphQL API limited to 100 requests per 15 minutes per IP
+- Adjust in `server/index.ts` if needed
 
-### Firebase Connection Issues
+### Database Migrations
+- Manual migrations via Supabase SQL Editor
+- Future: Consider using Prisma or Supabase CLI
 
-- Verify your Firebase configuration in `.env`
-- Check that Firestore and Authentication are enabled
-- Ensure security rules allow read/write for authenticated users
+### HIPAA Compliance Notes
+- All PHI is encrypted at rest (Supabase handles this)
+- No sensitive data in network logs
+- Audit trail via transactions table
+- User access controls via RLS
+- **Consult legal team for full compliance certification**
 
-### Backend Won't Start
+## 🔧 Configuration
 
-- Verify `firebase-adminsdk.json` is in the `server` directory
-- Check that PORT 4000 is not in use (or change PORT in `.env`)
-- Run `npm install` in the root directory
+### Enable Google OAuth (Optional)
 
-### Frontend Build Errors
+1. Go to Supabase Dashboard > Authentication > Providers
+2. Enable Google provider
+3. Add your Google Client ID and Secret
+4. Configure redirect URLs
 
-- Delete `node_modules` and `package-lock.json` in `client/`
-- Run `npm install` again in `client/`
-- Ensure all environment variables start with `REACT_APP_`
+### Customize Branding
 
-### Drug Search Not Working
+Clinic-specific branding (colors, logo) can be configured in the Settings page (Superadmin only).
 
-- Check your internet connection (RxNorm API requires internet)
-- Ensure the backend server is running on port 4000
-- Check browser console for CORS or network errors
-- Verify RxNorm API is accessible: https://rxnav.nlm.nih.gov/REST/approximateTerm.json?term=aspirin
-- If RxNorm is down, only local Firestore search will work
+## 📚 Additional Documentation
 
-## Development
+- [Technical Specification](/.env.local) - Full technical spec
+- [Implementation Plan](/IMPLEMENTATION_PLAN.md) - Development roadmap
+- [Supabase Docs](https://supabase.com/docs)
+- [RxNorm API](https://lhncbc.nlm.nih.gov/RxNav/APIs/RxNormAPIs.html)
+- [Mantine UI](https://mantine.dev/)
 
-### Running Tests
+## 🤝 Contributing
+
+This is a private project for specific clinic use. For bugs or feature requests:
+1. Document the issue clearly
+2. Include steps to reproduce
+3. Note your user role and permissions
+
+## 📄 License
+
+Proprietary - All Rights Reserved
+
+## 🎉 Getting Started Summary
 
 ```bash
-cd client
-npm test
+# 1. Run SQL schema in Supabase dashboard
+# 2. Add SUPABASE_SERVICE_KEY and JWT_SECRET to .env.local
+# 3. Install dependencies
+npm install
+
+# 4. Start application
+npm run dev:all
+
+# 5. Open browser
+# http://localhost:3000
+
+# 6. Sign up to create your clinic
 ```
 
-### Building for Production
+---
 
-```bash
-# Build the React app
-cd client
-npm run build
-
-# The build folder is ready to be deployed
-```
-
-### Environment Variables
-
-The application uses environment variables for configuration:
-- Backend variables are in `.env` (root)
-- Frontend variables must start with `REACT_APP_`
-
-## Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Test thoroughly
-5. Submit a pull request
-
-## License
-
-This project is licensed under the ISC License.
-
-## Support
-
-For issues, questions, or contributions, please open an issue on the GitHub repository.
-
-## Acknowledgments
-
-- [RxNorm API](https://lhncbc.nlm.nih.gov/RxNav/) by National Library of Medicine (NIH) for comprehensive, free pharmaceutical database
-- [Firebase](https://firebase.google.com/) for backend infrastructure and real-time database
-- [Tamagui](https://tamagui.dev/) for cross-platform UI components
-- [Lucide React](https://lucide.dev/) for beautiful icons
-- [QRCode.js](https://github.com/soldair/node-qrcode) for QR code generation
-
+**Built with ❤️ for non-profit clinics providing essential healthcare services.**

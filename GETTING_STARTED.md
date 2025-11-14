@@ -1,189 +1,284 @@
-# Getting Started with DaanaRX
+# 🚀 DaanaRx Getting Started Guide
 
-Welcome! This guide will have you up and running in under 10 minutes.
+## ⚡ Quick Setup (5 Minutes)
 
-## What You're Building
+### Step 1: Database Setup (2 minutes)
 
-DaanaRX is a pharmaceutical inventory management system that helps you:
-- Track medication inventory with lot numbers
-- Check in and check out stock
-- Generate printable QR code labels
-- View real-time reports and analytics
-- Manage storage locations
+1. **Open Supabase Dashboard**
+   - Go to: https://cnjajswnqmzzhzoyadqa.supabase.co
+   - Log in with your Supabase account
 
-## Prerequisites
+2. **Run Database Schema**
+   - Click "SQL Editor" in the left sidebar
+   - Click "New query"
+   - Open the `supabase-schema.sql` file in this project
+   - Copy **all** contents (Cmd+A, Cmd+C)
+   - Paste into SQL Editor
+   - Click "Run" or press Cmd+Enter
+   - ✅ You should see "Success. No rows returned"
 
-Before starting, make sure you have:
+### Step 2: Add Missing Environment Variables (1 minute)
 
-1. **Node.js** installed (v16 or higher)
-   - Check: `node --version`
-   - Download: https://nodejs.org/
-
-2. **A Firebase account** (free)
-   - Sign up: https://firebase.google.com/
-
-3. **A code editor** (optional but recommended)
-   - VS Code, Sublime Text, or any editor you prefer
-
-## Quick Start (3 Steps)
-
-### Step 1: Firebase Setup
-
-1. Create a new Firebase project at https://console.firebase.google.com/
-2. Enable **Firestore Database** (Start in test mode)
-3. Enable **Anonymous Authentication**
-4. Get your web config (Project Settings → Your apps → Add web app)
-5. Download the Admin SDK key (Project Settings → Service Accounts → Generate new private key)
-
-### Step 2: Configure Your App
-
-1. **Place the Admin SDK key:**
-   - Save the downloaded JSON file as `firebase-adminsdk.json`
-   - Move it to: `/Users/rithik/Code/DaanarRX/server/firebase-adminsdk.json`
-
-2. **Update environment variables:**
-   - The `.env.example` file is already configured with the Firebase keys from your original HTML file
-   - If those keys still work, you can skip this step!
-   - If not, create a `.env` file and add your new Firebase config
-
-### Step 3: Install & Run
-
-Open a terminal in the project directory and run:
+Open `.env.local` and add these two required variables:
 
 ```bash
-# Install dependencies for both backend and frontend
-npm run install-all
+# Get from Supabase Dashboard > Settings > API > service_role key (secret!)
+SUPABASE_SERVICE_KEY=eyJhbGc...your_service_key_here
 
-# Start both servers (backend + frontend)
-npm run dev
+# Generate any random 32+ character string
+JWT_SECRET=your_super_secret_jwt_key_here_at_least_32_characters_long
 ```
 
-That's it! The app will open at http://localhost:3000
+**How to get SUPABASE_SERVICE_KEY:**
+1. In Supabase dashboard, go to Settings (gear icon)
+2. Click "API" in the settings menu
+3. Find "Project API keys" section
+4. Copy the `service_role` key (NOT the anon key!)
+5. Paste it into `.env.local`
 
-## First Time Using the App?
-
-### 1. Set Up a Location
-- Click **Admin** on the home screen
-- Add a location like "Shelf A-1" and select "Room Temp"
-- Click **Add**
-
-### 2. Check In Your First Item
-- Go back to home and click **Check In**
-- **Create a Lot:**
-  - Use today's date
-  - Enter a source/donor name (e.g., "Main Warehouse")
-  - Click "Create Lot"
-- **Add a Unit:**
-  - Select the lot you just created
-  - Try the NDC lookup with "0071-0570-23" (Prozac example)
-  - Or click "Enter Manually Instead" to type in drug info
-  - Add quantity (e.g., 30)
-  - Select expiry date
-  - Choose the location you created
-  - Click "Add Unit & Generate DaanaRX Label"
-- Print the label (or just click "Done" to skip)
-
-### 3. View Your Inventory
-- Click **Inventory** from home
-- You should see your unit listed!
-
-### 4. Try Check Out
-- Click **Check Out** from home
-- Enter the Unit ID (starts with "UNIT-...")
-- Enter quantity to dispense
-- Add a patient reference code
-- Click "Dispense Stock"
-
-### 5. Check the Reports
-- Click **Reports** from home
-- See all your transactions logged
-
-## Understanding the Workflow
-
-```
-1. ADMIN: Set up locations first
-         ↓
-2. CHECK IN: Create lots → Add units → Print labels
-         ↓
-3. SCAN: Look up units by scanning/entering Unit ID
-         ↓
-4. CHECK OUT: Dispense medication with patient tracking
-         ↓
-5. REPORTS: View all transactions and export data
-```
-
-## Common Questions
-
-**Q: Do I need to use real medication data?**
-A: No! You can enter test data to learn the system.
-
-**Q: What if the NDC lookup doesn't work?**
-A: Click "Enter Manually Instead" to type in the drug information yourself.
-
-**Q: Can I use a barcode scanner?**
-A: The app accepts keyboard input, so USB barcode scanners work great! They'll type directly into the input fields.
-
-**Q: Where is my data stored?**
-A: In your Firebase Firestore database. It's cloud-based and real-time.
-
-**Q: Is this production-ready?**
-A: Almost! You'll want to update Firebase security rules before deploying to production. See the README for details.
-
-## Troubleshooting
-
-### "Cannot find module" error
+**How to generate JWT_SECRET:**
 ```bash
-# Delete and reinstall dependencies
-rm -rf node_modules client/node_modules
-npm run install-all
+# Option 1: Use openssl
+openssl rand -base64 32
+
+# Option 2: Use Node.js
+node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+
+# Option 3: Just type a long random string (32+ chars)
 ```
 
-### Backend won't connect to Firebase
-- Check that `firebase-adminsdk.json` is in the `server/` folder
-- Verify the file is valid JSON
-- Make sure you downloaded the correct service account key
+### Step 3: Install and Run (2 minutes)
 
-### Port 4000 already in use
 ```bash
-# Kill whatever's using port 4000
-lsof -ti:4000 | xargs kill -9
+# Install dependencies (if not already done)
+npm install
 
-# Or change the port in .env
-PORT=4001
+# Start both frontend and backend
+npm run dev:all
 ```
 
-### React app won't load
-```bash
-# Make sure both servers are running
-npm run dev
-
-# Check the terminal for errors
-# Frontend runs on http://localhost:3000
-# Backend runs on http://localhost:4000
+You should see:
+```
+🚀 DaanaRx Server ready at http://localhost:4000/graphql
+▲ Next.js 14.2.0
+- Local: http://localhost:3000
 ```
 
-## Next Steps
+### Step 4: Create Your Account
 
-Once you're comfortable with the basics:
+1. Open http://localhost:3000
+2. Click "Sign up"
+3. Fill in:
+   - **Email**: your email
+   - **Password**: choose a secure password
+   - **Clinic Name**: your clinic's name
+4. Click "Create Account"
 
-1. **Customize**: Modify the styling, add your logo
-2. **Secure**: Update Firebase security rules for production
-3. **Deploy**: Host on Firebase Hosting, Vercel, or your preferred platform
-4. **Extend**: Add features like barcode scanning, email notifications, etc.
+🎉 **You're now logged in as a Superadmin!**
 
-## Need More Help?
+---
 
-- See **SETUP_GUIDE.md** for detailed setup instructions
-- See **README.md** for comprehensive documentation
-- See **PROJECT_SUMMARY.md** for technical details
+## 📋 Next Steps
 
-## Tips for Success
+### 1. Create Storage Locations
 
-✅ Start with test data to learn the system
-✅ Set up multiple locations to see how inventory is organized
-✅ Use the CSV export to backup your data
-✅ Check out the FEFO warning when you have multiple units of the same drug
-✅ Use the Scan feature for quick lookups
+Before checking in medications, create at least one location:
 
-Happy inventory management! 🎉
+1. Click "Admin" in the sidebar
+2. Click "Create Location"
+3. Enter name (e.g., "Main Refrigerator" or "Cabinet A")
+4. Select temperature type (Fridge or Room Temperature)
+5. Click "Create"
 
+### 2. Check In Your First Medication
+
+1. Click "Check In" in the sidebar
+2. **Step 1: Create Lot**
+   - Enter donation source (e.g., "CVS Pharmacy")
+   - Select the location you created
+   - Click "Continue to Drug Search"
+
+3. **Step 2: Find Drug**
+   - Enter NDC barcode (e.g., `0781-1506-01` for Lisinopril)
+   - Click "Search"
+   - OR enter drug details manually
+   - Click "Continue to Unit Details"
+
+4. **Step 3: Create Unit**
+   - Enter total quantity (e.g., 100)
+   - Available quantity will auto-fill
+   - Select expiry date
+   - Click "Create Unit"
+
+5. **QR Code Generated!**
+   - Your QR code is displayed
+   - Click "Print Label" to print
+   - Click "Add Another Unit" to continue
+
+### 3. Check Out a Medication
+
+1. Click "Check Out" in the sidebar
+2. Enter the Unit ID (from previous step)
+   - Or scan the QR code
+3. Click "Search"
+4. View unit details
+5. Enter:
+   - Quantity to dispense
+   - Patient reference ID (optional)
+   - Notes (optional)
+6. Click "Check Out"
+
+---
+
+## 🔍 Testing the System
+
+### Test Flow 1: Complete Medication Lifecycle
+
+1. **Admin**: Create a location called "Test Fridge"
+2. **Check In**:
+   - Create lot from "Test Pharmacy"
+   - Add Lisinopril 10mg (NDC: 0781-1506-01)
+   - Quantity: 100
+   - Expiry: 1 year from now
+3. **Home**: View dashboard stats (should show 1 total unit)
+4. **Inventory**: See your unit listed
+5. **Scan**: Lookup the unit by ID
+6. **Check Out**:
+   - Search for the unit
+   - Dispense 10 units
+   - Add patient ref: "TEST-001"
+7. **Reports**: See the check-in and check-out transactions
+8. **Inventory**: Verify available quantity is now 90
+
+### Test Flow 2: Role-Based Access
+
+1. **Settings**: Invite a new user
+   - Email: test@example.com
+   - Username: testuser
+   - Role: Employee
+2. Log out and sign in as the new user (use temp password from logs)
+3. Verify Employee can:
+   - ✅ Access Check In
+   - ✅ Access Check Out
+   - ✅ View Inventory
+   - ❌ NOT access Reports
+   - ❌ NOT access Settings
+
+---
+
+## 🎯 Common Tasks
+
+### Add More Medications
+Go to Check In → Use existing lot → Select your lot → Add units
+
+### View Inventory
+Inventory page shows all units with search and pagination
+
+### Print QR Labels
+After creating a unit, click "Print Label" in the QR modal
+
+### See Transaction History
+Reports page shows all transactions with filters
+
+### Manage Users
+Settings (Superadmin only) → Invite User
+
+### Manage Locations
+Admin → Create Location (or Edit/Delete existing)
+
+---
+
+## 🆘 Troubleshooting
+
+### "Network Error" when signing in
+- ✅ Check backend is running: http://localhost:4000/health
+- ✅ Should return: `{"status":"ok","timestamp":"..."}`
+- ❌ If not running: `npm run server`
+
+### "User record not found"
+- ❌ Database schema not run
+- ✅ Go back to Step 1 and run `supabase-schema.sql`
+
+### TypeScript errors
+- ✅ Should have zero errors!
+- Run: `npx tsc --noEmit`
+- If errors, run: `npm install`
+
+### Can't access certain pages
+- ✅ Check your user role
+- Employees: Limited access
+- Admins: Read-only for inventory/reports
+- Superadmin: Full access
+
+---
+
+## 📊 Dashboard Metrics
+
+The home page shows:
+- **Total Units**: All units with available quantity > 0
+- **Expiring Soon**: Units expiring within 30 days
+- **Recent Check-Ins**: Check-ins in the last 7 days
+- **Recent Check-Outs**: Check-outs in the last 7 days
+- **Low Stock Alerts**: Units with <10% remaining
+
+---
+
+## 🔐 Security Notes
+
+### Never Commit These Files:
+- `.env.local` (contains secrets!)
+- `node_modules/`
+- `.next/`
+
+### Password Best Practices:
+- Use strong passwords (12+ characters)
+- Don't share accounts
+- Each user should have their own account
+
+### Production Deployment:
+- Use HTTPS (required for camera access)
+- Enable Supabase RLS policies (already done)
+- Set up proper CORS in production
+- Use environment variables for all secrets
+
+---
+
+## 📞 Need Help?
+
+### Check These First:
+1. README.md - Full documentation
+2. IMPLEMENTATION_PLAN.md - Development roadmap
+3. Console logs - Frontend: Browser DevTools, Backend: Terminal
+
+### Database Issues:
+- Verify schema is run in Supabase
+- Check RLS policies are enabled
+- Ensure service key is correct
+
+### API Issues:
+- RxNorm API: No key needed, might be rate-limited
+- OpenFDA: Backup if RxNorm fails
+- Both cache results in local database
+
+---
+
+## ✅ Success Checklist
+
+Before using in production:
+
+- [ ] Database schema executed successfully
+- [ ] All environment variables configured
+- [ ] Can sign up and create account
+- [ ] Can create locations
+- [ ] Can check in medications
+- [ ] QR codes generate correctly
+- [ ] Can check out medications
+- [ ] Transactions appear in reports
+- [ ] Inventory updates correctly
+- [ ] Role-based access working
+- [ ] Zero TypeScript errors
+- [ ] Backend health endpoint responsive
+
+---
+
+**You're all set! Start managing your clinic's medication inventory with DaanaRx.**
