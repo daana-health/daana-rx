@@ -66,6 +66,20 @@ async function startServer() {
     }) as any
   );
 
+  // Root endpoint
+  app.get('/', (_req, res) => {
+    res.json({
+      name: 'DaanaRx API',
+      version: '1.0.0',
+      status: 'running',
+      endpoints: {
+        graphql: '/graphql',
+        health: '/health',
+      },
+      timestamp: new Date().toISOString(),
+    });
+  });
+
   // Health check endpoint
   app.get('/health', (_req, res) => {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });
