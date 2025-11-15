@@ -35,12 +35,21 @@ async function handler(req: NextRequest) {
       }
     );
 
-    return NextResponse.json(result.body, {
-      status: 200,
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    });
+    // Handle the response based on kind
+    if (result.body.kind === 'single') {
+      return NextResponse.json(result.body.singleResult, {
+        status: 200,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+    }
+
+    // For incremental responses, return the initial result
+    return NextResponse.json(
+      { errors: [{ message: 'Incremental responses not supported' }] },
+      { status: 500 }
+    );
   } catch (error) {
     console.error('GraphQL request error:', error);
     return NextResponse.json(
