@@ -1,11 +1,11 @@
 import { GraphQLError } from 'graphql';
-import { GraphQLContext } from '../types/index';
-import * as authService from '../services/authService';
-import * as drugService from '../services/drugService';
-import * as unitService from '../services/unitService';
-import * as transactionService from '../services/transactionService';
-import * as locationService from '../services/locationService';
-import { supabaseServer } from '../utils/supabase';
+import { GraphQLContext } from './types/index';
+import * as authService from './services/authService';
+import * as drugService from './services/drugService';
+import * as unitService from './services/unitService';
+import * as transactionService from './services/transactionService';
+import * as locationService from './services/locationService';
+import { supabaseServer } from './utils/supabase';
 
 // Helper to require authentication
 function requireAuth(context: GraphQLContext) {
