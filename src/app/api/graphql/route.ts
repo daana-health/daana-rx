@@ -1,9 +1,8 @@
 import { ApolloServer } from '@apollo/server';
 import { HeaderMap } from '@apollo/server';
 import { NextRequest, NextResponse } from 'next/server';
-import { typeDefs } from '../../../../../server/graphql/schema';
-import { resolvers } from '../../../../../server/graphql/resolvers';
-import { createGraphQLContext } from '../../../../../server/middleware/auth';
+import { typeDefs, resolvers } from '../../../../../server/graphql';
+import { createGraphQLContext } from '../../../../../server/middleware';
 
 const server = new ApolloServer({
   typeDefs,
