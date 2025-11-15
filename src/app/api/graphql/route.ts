@@ -1,5 +1,4 @@
 import { ApolloServer } from '@apollo/server';
-import { HeaderMap } from '@apollo/server';
 import { NextRequest, NextResponse } from 'next/server';
 import { typeDefs, resolvers } from '@server/graphql';
 import { createGraphQLContextFromNextRequest } from '@server/middleware';
@@ -17,49 +16,46 @@ const server = new ApolloServer({
   },
 });
 
-// Start the server (only once)
-const serverStart = server.start();
+const serverStartPromise = server.start();
 
-async function handleRequest(req: NextRequest) {
-  await serverStart;
+async function handler(req: NextRequest) {
+  await serverStartPromise;
 
-  const body = await req.text();
-  const headers = new HeaderMap();
-  req.headers.forEach((value, key) => {
-    headers.set(key, value);
-  });
+  try {
+    const body = await req.json();
 
-  const httpGraphQLResponse = await server.executeHTTPGraphQLRequest({
-    httpGraphQLRequest: {
-      method: req.method!.toUpperCase(),
-      headers,
-      body,
-      search: req.nextUrl.search,
-    },
-    context: async () => createGraphQLContextFromNextRequest(req),
-  });
+    const result = await server.executeOperation(
+      {
+        query: body.query,
+        variables: body.variables,
+        operationName: body.operationName,
+      },
+      {
+        contextValue: await createGraphQLContextFromNextRequest(req),
+      }
+    );
 
-  const responseHeaders: Record<string, string> = {};
-  for (const [key, value] of httpGraphQLResponse.headers) {
-    responseHeaders[key] = value;
+    return NextResponse.json(result.body, {
+      status: 200,
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+  } catch (error) {
+    console.error('GraphQL request error:', error);
+    return NextResponse.json(
+      {
+        errors: [
+          {
+            message: 'Internal server error',
+            extensions: { code: 'INTERNAL_SERVER_ERROR' },
+          },
+        ],
+      },
+      { status: 500 }
+    );
   }
-
-  // Convert body to string
-  const bodyString = httpGraphQLResponse.body.kind === 'complete'
-    ? httpGraphQLResponse.body.string
-    : '';
-
-  return new NextResponse(bodyString, {
-    status: httpGraphQLResponse.status || 200,
-    headers: responseHeaders,
-  });
 }
 
-export async function GET(req: NextRequest) {
-  return handleRequest(req);
-}
-
-export async function POST(req: NextRequest) {
-  return handleRequest(req);
-}
+export { handler as GET, handler as POST };
 

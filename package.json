@@ -14,7 +14,8 @@
   },
   "dependencies": {
     "@apollo/client": "^3.11.0",
-    "@apollo/server": "^4.12.2",
+    "@apollo/server": "^5.1.0",
+    "@as-integrations/next": "^4.1.0",
     "@hookform/resolvers": "^3.9.0",
     "@mantine/core": "^7.13.0",
     "@mantine/dates": "^7.17.8",
