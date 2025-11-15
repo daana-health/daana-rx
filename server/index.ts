@@ -10,7 +10,7 @@ import { typeDefs } from './graphql/schema.js';
 import { resolvers } from './graphql/resolvers.js';
 import { authMiddleware, createGraphQLContext } from './middleware/auth.js';
 
-const PORT = process.env.PORT || 4000;
+const PORT = process.env.GRAPHQL_PORT || process.env.PORT || 4000;
 
 async function startServer() {
   const app = express();
@@ -69,7 +69,7 @@ async function startServer() {
   // Root endpoint
   app.get('/', (_req, res) => {
     res.json({
-      name: 'DaanaRx API',
+      name: 'DaanaRx GraphQL API',
       version: '1.0.0',
       status: 'running',
       endpoints: {
