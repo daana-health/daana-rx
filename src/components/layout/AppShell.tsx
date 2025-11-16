@@ -1,9 +1,9 @@
 'use client';
 
 import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { useSelector, useDispatch } from 'react-redux';
-import { AppShell as MantineAppShell, Burger, Group, NavLink, Text, Button, Loader, Center } from '@mantine/core';
+import { AppShell as MantineAppShell, Burger, Group, NavLink, Text, Button, Loader, Center, ActionIcon } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
 import { RootState } from '../../store';
 import { restoreAuth, logout } from '../../store/authSlice';
@@ -18,6 +18,7 @@ import {
   IconSettings,
   IconLogout,
   IconLocation,
+  IconArrowLeft,
 } from '@tabler/icons-react';
 
 interface AppShellProps {
@@ -27,6 +28,7 @@ interface AppShellProps {
 export function AppShell({ children }: AppShellProps) {
   const [opened, { toggle }] = useDisclosure();
   const router = useRouter();
+  const pathname = usePathname();
   const dispatch = useDispatch();
   const { user, clinic } = useSelector((state: RootState) => state.auth);
   const { isAuthenticated, hasHydrated } = useAuth();
@@ -44,6 +46,13 @@ export function AppShell({ children }: AppShellProps) {
     router.push(href);
     if (opened) toggle();
   };
+
+  const handleBack = () => {
+    router.back();
+  };
+
+  // Don't show back button on home page
+  const showBackButton = pathname !== '/';
 
   if (!hasHydrated) {
     return (
@@ -86,6 +95,17 @@ export function AppShell({ children }: AppShellProps) {
         <Group h="100%" px="md" justify="space-between">
           <Group>
             <Burger opened={opened} onClick={toggle} hiddenFrom="sm" size="sm" />
+            {showBackButton && (
+              <ActionIcon
+                variant="subtle"
+                color="gray"
+                size="lg"
+                onClick={handleBack}
+                aria-label="Go back"
+              >
+                <IconArrowLeft size={20} />
+              </ActionIcon>
+            )}
             <Text size="xl" fw={700}>
               {clinic?.name || 'DaanaRx'}
             </Text>
