@@ -17,7 +17,7 @@ import {
   ActionIcon,
   Tooltip,
 } from '@mantine/core';
-import { IconMail, IconTrash } from '@tabler/icons-react';
+import { IconMail, IconTrash, IconCopy } from '@tabler/icons-react';
 import { notifications } from '@mantine/notifications';
 import { AppShell } from '../../components/layout/AppShell';
 import { GetUsersResponse, UserData } from '../../types/graphql';
@@ -41,6 +41,7 @@ const GET_INVITATIONS = gql`
       email
       userRole
       status
+      invitationToken
       createdAt
       expiresAt
       acceptedAt
@@ -58,6 +59,7 @@ const SEND_INVITATION = gql`
       invitationId
       email
       status
+      invitationToken
     }
   }
 `;
@@ -82,6 +84,7 @@ interface Invitation {
   email: string;
   userRole: string;
   status: string;
+  invitationToken: string;
   createdAt: string;
   expiresAt: string;
   acceptedAt?: string;
@@ -102,12 +105,26 @@ export default function SettingsPage() {
   }>(GET_INVITATIONS);
 
   const [sendInvitation, { loading }] = useMutation(SEND_INVITATION, {
-    onCompleted: () => {
-      notifications.show({
-        title: 'Success',
-        message: 'Invitation sent successfully',
-        color: 'green',
+    onCompleted: (data) => {
+      const invitationUrl = `${window.location.origin}/auth/signup?invitation=${data.sendInvitation.invitationToken}`;
+      
+      // Copy to clipboard
+      navigator.clipboard.writeText(invitationUrl).then(() => {
+        notifications.show({
+          title: 'Invitation Created!',
+          message: 'Invitation link copied to clipboard. Share it with the user.',
+          color: 'green',
+          autoClose: 8000,
+        });
+      }).catch(() => {
+        notifications.show({
+          title: 'Invitation Created!',
+          message: `Share this link: ${invitationUrl}`,
+          color: 'green',
+          autoClose: false,
+        });
       });
+      
       setModalOpened(false);
       setEmail('');
       setUserRole('employee');
@@ -190,6 +207,25 @@ export default function SettingsPage() {
     });
   };
 
+  const copyInvitationLink = (invitationToken: string, email: string) => {
+    const invitationUrl = `${window.location.origin}/auth/signup?invitation=${invitationToken}`;
+    
+    navigator.clipboard.writeText(invitationUrl).then(() => {
+      notifications.show({
+        title: 'Link Copied!',
+        message: `Invitation link for ${email} copied to clipboard`,
+        color: 'green',
+      });
+    }).catch(() => {
+      notifications.show({
+        title: 'Copy Failed',
+        message: invitationUrl,
+        color: 'yellow',
+        autoClose: false,
+      });
+    });
+  };
+
   const getStatusBadge = (status: string) => {
     const colors: Record<string, string> = {
       invited: 'blue',
@@ -265,6 +301,15 @@ export default function SettingsPage() {
                       <Group gap="xs">
                         {invitation.status === 'invited' && (
                           <>
+                            <Tooltip label="Copy invitation link">
+                              <ActionIcon
+                                variant="light"
+                                color="grape"
+                                onClick={() => copyInvitationLink(invitation.invitationToken, invitation.email)}
+                              >
+                                <IconCopy size={16} />
+                              </ActionIcon>
+                            </Tooltip>
                             <Tooltip label="Resend invitation">
                               <ActionIcon
                                 variant="light"

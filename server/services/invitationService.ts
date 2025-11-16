@@ -94,6 +94,8 @@ export const invitationService = {
 
   /**
    * Send invitation email via Supabase Auth
+   * NOTE: Email sending is disabled for now. The invitation link must be shared manually.
+   * The invitation URL will be returned to the admin to share with the invitee.
    */
   async sendInvitationEmail(email: string, invitationToken: string, clinicId: string): Promise<void> {
     // Get clinic name for email branding
@@ -108,20 +110,17 @@ export const invitationService = {
     // Create a signup link with invitation token
     const inviteUrl = `${process.env.NEXT_PUBLIC_APP_URL}/auth/signup?invitation=${invitationToken}`;
 
-    // Send email using Supabase's invite user feature
-    const { error } = await supabaseServer.auth.admin.inviteUserByEmail(email, {
-      data: {
-        invitation_token: invitationToken,
-        clinic_name: clinicName,
-        invite_url: inviteUrl,
-      },
-      redirectTo: inviteUrl,
-    });
+    // Log the invitation URL for the admin to share
+    console.log('📧 Invitation created for:', email);
+    console.log('🔗 Share this link:', inviteUrl);
+    console.log('🏥 Clinic:', clinicName);
 
-    if (error) {
-      console.error('Failed to send invitation email:', error);
-      throw new Error(`Failed to send invitation email: ${error.message}`);
-    }
+    // TODO: Integrate with a proper email service (SendGrid, Resend, etc.)
+    // For now, the admin must manually share the invitation URL
+    
+    // NOTE: DO NOT use Supabase's inviteUserByEmail - it creates an auth user immediately
+    // and sends them to a password reset flow, which is wrong for our invitation system.
+    // We want to create the auth user ONLY when they accept the invitation.
   },
 
   /**
