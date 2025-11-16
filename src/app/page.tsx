@@ -108,22 +108,22 @@ function StatCard({
 }: {
   title: string;
   value: number;
-  icon: React.ComponentType<{ size?: string | number; style?: React.CSSProperties }>;
+  icon: React.ComponentType<{ size?: string | number }>;
   color: string;
 }) {
   return (
     <Card shadow="sm" padding="lg" radius="md" withBorder>
-      <Group justify="apart">
-        <div>
-          <Text c="dimmed" size="sm" fw={500}>
+      <Stack gap="md">
+        <Group justify="space-between" align="flex-start">
+          <Text c="dimmed" size="sm" fw={500} tt="uppercase">
             {title}
           </Text>
-          <Title order={2} mt="xs">
-            {value}
-          </Title>
-        </div>
-        <Icon size={40} style={{ color }} />
-      </Group>
+          <ThemeIcon size={44} radius="md" color={color} variant="light">
+            <Icon size={24} />
+          </ThemeIcon>
+        </Group>
+        <Title order={1}>{value}</Title>
+      </Stack>
     </Card>
   );
 }
