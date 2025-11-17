@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useMutation, gql } from '@apollo/client';
 import { useSelector } from 'react-redux';
 import { useRouter } from 'next/navigation';
@@ -18,6 +18,7 @@ import {
   Group,
   Modal,
   Alert,
+  Loader,
 } from '@mantine/core';
 import { DateInput } from '@mantine/dates';
 import { notifications } from '@mantine/notifications';
@@ -111,6 +112,9 @@ export default function CheckInPage() {
 
   // Drug search state
   const [ndcInput, setNdcInput] = useState('');
+  const [ndcAutocompleteResults, setNdcAutocompleteResults] = useState<any[]>([]);
+  const [showNdcDropdown, setShowNdcDropdown] = useState(false);
+  const [searchingNdc, setSearchingNdc] = useState(false);
   const [drugNameInput, setDrugNameInput] = useState('');
   const [searchingRxNorm, setSearchingRxNorm] = useState(false);
   const [rxNormResults, setRxNormResults] = useState<any[]>([]);
@@ -190,6 +194,118 @@ export default function CheckInPage() {
     if (activeStep > 0) {
       setActiveStep(activeStep - 1);
     }
+  };
+
+  // Debounced NDC autocomplete search
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      if (ndcInput.trim().length >= 3) {
+        handleNdcAutocomplete(ndcInput);
+      } else {
+        setNdcAutocompleteResults([]);
+        setShowNdcDropdown(false);
+      }
+    }, 500); // 500ms debounce
+
+    return () => clearTimeout(timeoutId);
+  }, [ndcInput]);
+
+  const handleNdcAutocomplete = async (searchTerm: string) => {
+    if (searchTerm.length < 3) return;
+
+    setSearchingNdc(true);
+    setNdcAutocompleteResults([]);
+
+    try {
+      // Search RxNorm by approximate term to find drugs
+      const response = await fetch(
+        `https://rxnav.nlm.nih.gov/REST/approximateTerm.json?term=${encodeURIComponent(searchTerm)}&maxEntries=10`
+      );
+      const data = await response.json();
+
+      if (data.approximateGroup?.candidate) {
+        const candidates = Array.isArray(data.approximateGroup.candidate) 
+          ? data.approximateGroup.candidate 
+          : [data.approximateGroup.candidate];
+
+        const results = [];
+        
+        // Get details for each candidate
+        for (const candidate of candidates.slice(0, 5)) {
+          try {
+            const rxcui = candidate.rxcui;
+            
+            // Get drug properties
+            const propsResponse = await fetch(
+              `https://rxnav.nlm.nih.gov/REST/rxcui/${rxcui}/allProperties.json?prop=all`
+            );
+            const propsData = await propsResponse.json();
+
+            // Get NDCs
+            const ndcResponse = await fetch(
+              `https://rxnav.nlm.nih.gov/REST/rxcui/${rxcui}/ndcs.json`
+            );
+            const ndcData = await ndcResponse.json();
+
+            const properties = propsData.propConceptGroup?.propConcept || [];
+            const ndcs = ndcData.ndcGroup?.ndcList?.ndc || [];
+
+            const medicationName = properties.find((p: any) => p.propName === 'RxNorm Name')?.propValue || candidate.name;
+            const strength = properties.find((p: any) => p.propName === 'Strength')?.propValue || '';
+            const doseForm = properties.find((p: any) => p.propName === 'Dose Form')?.propValue || 'Tablet';
+
+            // Parse strength
+            const strengthMatch = strength.match(/(\d+\.?\d*)\s*(\w+)/);
+            const strengthNum = strengthMatch ? parseFloat(strengthMatch[1]) : 0;
+            const strengthUnit = strengthMatch ? strengthMatch[2] : 'mg';
+
+            if (ndcs.length > 0) {
+              results.push({
+                rxcui,
+                medicationName,
+                genericName: medicationName.split(' ')[0],
+                strength: strengthNum,
+                strengthUnit,
+                form: doseForm,
+                ndcId: ndcs[0],
+                displayText: `${medicationName} - NDC: ${ndcs[0]}`,
+              });
+            }
+          } catch (err) {
+            console.error(`Error fetching details for candidate:`, err);
+          }
+        }
+
+        setNdcAutocompleteResults(results);
+        setShowNdcDropdown(results.length > 0);
+      } else {
+        setShowNdcDropdown(false);
+      }
+    } catch (error) {
+      console.error('NDC autocomplete error:', error);
+      setShowNdcDropdown(false);
+    } finally {
+      setSearchingNdc(false);
+    }
+  };
+
+  const handleSelectNdcAutocomplete = (drug: any) => {
+    setManualDrug({
+      medicationName: drug.medicationName,
+      genericName: drug.genericName,
+      strength: drug.strength,
+      strengthUnit: drug.strengthUnit,
+      ndcId: drug.ndcId,
+      form: drug.form,
+    });
+    setNdcInput(drug.ndcId);
+    setNdcAutocompleteResults([]);
+    setShowNdcDropdown(false);
+    notifications.show({
+      title: 'Drug Selected',
+      message: `${drug.medicationName}`,
+      color: 'green',
+    });
   };
 
   // Mutations
@@ -581,23 +697,70 @@ export default function CheckInPage() {
                   </Button>
                 </Group>
 
-                <Group align="flex-end" gap="xs">
-                  <TextInput
-                    label="NDC Barcode"
-                    placeholder="Enter NDC code"
-                    value={ndcInput}
-                    onChange={(e) => setNdcInput(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        handleSearchNDC();
-                      }
-                    }}
-                    style={{ flex: 1 }}
-                  />
-                  <Button onClick={() => handleSearchNDC()}>
-                    Search
-                  </Button>
-                </Group>
+                <div style={{ position: 'relative' }}>
+                  <Group align="flex-end" gap="xs">
+                    <TextInput
+                      label="NDC or Drug Name"
+                      placeholder="Start typing drug name or NDC..."
+                      value={ndcInput}
+                      onChange={(e) => {
+                        setNdcInput(e.target.value);
+                        setShowNdcDropdown(true);
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && !showNdcDropdown) {
+                          handleSearchNDC();
+                        }
+                        if (e.key === 'Escape') {
+                          setShowNdcDropdown(false);
+                        }
+                      }}
+                      onFocus={() => {
+                        if (ndcAutocompleteResults.length > 0) {
+                          setShowNdcDropdown(true);
+                        }
+                      }}
+                      style={{ flex: 1 }}
+                      rightSection={searchingNdc ? <Loader size="xs" /> : null}
+                    />
+                    <Button onClick={() => handleSearchNDC()}>
+                      Search
+                    </Button>
+                  </Group>
+
+                  {showNdcDropdown && ndcAutocompleteResults.length > 0 && (
+                    <Card 
+                      withBorder 
+                      shadow="md"
+                      style={{ 
+                        position: 'absolute', 
+                        zIndex: 1000, 
+                        width: '100%',
+                        maxHeight: '300px',
+                        overflowY: 'auto',
+                        marginTop: '4px'
+                      }}
+                    >
+                      <Stack gap="xs">
+                        {ndcAutocompleteResults.map((drug, index) => (
+                          <Card
+                            key={index}
+                            padding="sm"
+                            style={{ cursor: 'pointer' }}
+                            onClick={() => handleSelectNdcAutocomplete(drug)}
+                            withBorder
+                          >
+                            <Text fw={600} size="sm">{drug.medicationName}</Text>
+                            <Text size="xs" c="dimmed">
+                              {drug.strength} {drug.strengthUnit} - {drug.form}
+                            </Text>
+                            <Text size="xs" c="blue">NDC: {drug.ndcId}</Text>
+                          </Card>
+                        ))}
+                      </Stack>
+                    </Card>
+                  )}
+                </div>
 
                 {selectedDrug && (
                   <Card withBorder p="sm" bg="green.0">
