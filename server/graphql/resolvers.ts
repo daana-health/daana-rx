@@ -233,8 +233,7 @@ export const resolvers = {
     ) => {
       requireRole(context, ['superadmin', 'admin']);
       const { clinic } = requireAuth(context);
-      const temp = input.temp === 'room_temp' ? 'room temp' : 'fridge';
-      return locationService.createLocation(input.name, temp, clinic.clinicId);
+      return locationService.createLocation(input.name, input.temp, clinic.clinicId);
     },
 
     updateLocation: async (
@@ -244,9 +243,9 @@ export const resolvers = {
     ) => {
       requireRole(context, ['superadmin']);
       const { clinic } = requireAuth(context);
-      const updates: { name?: string; temp?: 'fridge' | 'room temp' } = {};
+      const updates: { name?: string; temp?: 'fridge' | 'room_temp' } = {};
       if (input.name) updates.name = input.name;
-      if (input.temp) updates.temp = input.temp === 'room_temp' ? 'room temp' : 'fridge';
+      if (input.temp) updates.temp = input.temp;
       return locationService.updateLocation(input.locationId, updates, clinic.clinicId);
     },
 

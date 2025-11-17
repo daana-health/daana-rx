@@ -76,6 +76,7 @@ function CheckOutContent() {
   const [unitId, setUnitId] = useState('');
   const [selectedUnit, setSelectedUnit] = useState<UnitData | null>(null);
   const [quantity, setQuantity] = useState<number>(0);
+  const [patientName, setPatientName] = useState('');
   const [patientReference, setPatientReference] = useState('');
   const [notes, setNotes] = useState('');
   const [showQRScanner, setShowQRScanner] = useState(false);
@@ -161,6 +162,7 @@ function CheckOutContent() {
         input: {
           unitId: selectedUnit.unitId,
           quantity,
+          patientName: patientName || undefined,
           patientReferenceId: patientReference || undefined,
           notes: notes || undefined,
         },
@@ -172,6 +174,7 @@ function CheckOutContent() {
     setUnitId('');
     setSelectedUnit(null);
     setQuantity(0);
+    setPatientName('');
     setPatientReference('');
     setNotes('');
   };
@@ -333,6 +336,13 @@ function CheckOutContent() {
                 max={selectedUnit.availableQuantity}
                 value={quantity}
                 onChange={(value) => setQuantity(Number(value))}
+              />
+
+              <TextInput
+                label="Patient Name (Optional)"
+                placeholder="Enter patient or recipient name"
+                value={patientName}
+                onChange={(e) => setPatientName(e.target.value)}
               />
 
               <TextInput

@@ -2,6 +2,8 @@
 
 import { useState } from 'react';
 import { useQuery, useMutation, gql } from '@apollo/client';
+import { useSelector } from 'react-redux';
+import { useRouter } from 'next/navigation';
 import {
   Stack,
   Title,
@@ -15,9 +17,11 @@ import {
   Stepper,
   Group,
   Modal,
+  Alert,
 } from '@mantine/core';
 import { DateInput } from '@mantine/dates';
 import { notifications } from '@mantine/notifications';
+import { IconAlertCircle } from '@tabler/icons-react';
 import { AppShell } from '../../components/layout/AppShell';
 import { PageHeader } from '../../components/PageHeader';
 import { QRCodeSVG } from 'qrcode.react';
@@ -31,6 +35,7 @@ import {
   LotData,
   LocationData,
 } from '../../types/graphql';
+import { RootState } from '../../store';
 
 const GET_LOCATIONS = gql`
   query GetLocations {
@@ -93,6 +98,8 @@ const CREATE_UNIT = gql`
 `;
 
 export default function CheckInPage() {
+  const router = useRouter();
+  const user = useSelector((state: RootState) => state.auth.user);
   const [activeStep, setActiveStep] = useState(0);
 
   // Lot creation state
@@ -131,6 +138,10 @@ export default function CheckInPage() {
   const { refetch: searchNDC } = useQuery<SearchDrugByNDCResponse>(SEARCH_DRUG_BY_NDC, {
     skip: true,
   });
+  
+  // Check if there are any locations
+  const hasLocations = locationsData?.getLocations && locationsData.getLocations.length > 0;
+  const isAdmin = user?.userRole === 'admin' || user?.userRole === 'superadmin';
 
   // Mutations
   const [createLot, { loading: creatingLot }] = useMutation(CREATE_LOT, {
@@ -288,6 +299,21 @@ export default function CheckInPage() {
     <AppShell>
       <Stack gap="xl">
         <PageHeader title="Check In" description="Add new medications to inventory" />
+
+        {!hasLocations && (
+          <Alert icon={<IconAlertCircle size={16} />} title="No Storage Locations" color={isAdmin ? "yellow" : "red"} variant="filled">
+            {isAdmin ? (
+              <>
+                You need to create at least one storage location before checking in medications.{' '}
+                <Button variant="white" size="xs" onClick={() => router.push('/admin')} ml="xs">
+                  Go to Admin
+                </Button>
+              </>
+            ) : (
+              'No storage locations are available. Please contact your administrator to create storage locations before checking in medications.'
+            )}
+          </Alert>
+        )}
 
         <Stepper active={activeStep} onStepClick={setActiveStep}>
           <Stepper.Step label="Create Lot" description="Donation source">

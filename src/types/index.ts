@@ -2,7 +2,7 @@
 // Strict TypeScript types for the entire application
 
 export type UserRole = 'superadmin' | 'admin' | 'employee';
-export type TempType = 'fridge' | 'room temp';
+export type TempType = 'fridge' | 'room_temp';
 export type TransactionType = 'adjust' | 'check_out' | 'check_in';
 export type InvitationStatus = 'invited' | 'accepted' | 'expired';
 export type StrengthUnit = string; // mg, g, mcg, etc.
@@ -100,6 +100,7 @@ export interface Transaction {
   type: TransactionType;
   quantity: number;
   unitId: string;
+  patientName?: string;
   patientReferenceId?: string;
   userId: string;
   notes?: string;
@@ -150,6 +151,7 @@ export interface CreateUnitRequest {
 export interface CheckOutRequest {
   unitId: string;
   quantity: number;
+  patientName?: string;
   patientReferenceId?: string;
   notes?: string;
 }

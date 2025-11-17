@@ -6,14 +6,17 @@ import { Location, Lot } from '@/types';
  */
 export async function createLocation(
   name: string,
-  temp: 'fridge' | 'room temp',
+  temp: 'fridge' | 'room_temp',
   clinicId: string
 ): Promise<Location> {
+  // Transform room_temp to 'room temp' for database
+  const dbTemp = temp === 'room_temp' ? 'room temp' : temp;
+  
   const { data: location, error } = await supabaseServer
     .from('locations')
     .insert({
       name,
-      temp,
+      temp: dbTemp,
       clinic_id: clinicId,
     })
     .select()
@@ -68,14 +71,17 @@ export async function updateLocation(
   locationId: string,
   updates: {
     name?: string;
-    temp?: 'fridge' | 'room temp';
+    temp?: 'fridge' | 'room_temp';
   },
   clinicId: string
 ): Promise<Location> {
   const updateData: Record<string, unknown> = {};
 
   if (updates.name !== undefined) updateData.name = updates.name;
-  if (updates.temp !== undefined) updateData.temp = updates.temp;
+  if (updates.temp !== undefined) {
+    // Transform room_temp to 'room temp' for database
+    updateData.temp = updates.temp === 'room_temp' ? 'room temp' : updates.temp;
+  }
 
   const { data: location, error } = await supabaseServer
     .from('locations')
@@ -192,10 +198,13 @@ export async function getLotById(lotId: string, clinicId: string): Promise<Lot |
  * Format location data from database
  */
 function formatLocation(location: any): Location {
+  // Transform 'room temp' from database to 'room_temp' for GraphQL
+  const temp = location.temp === 'room temp' ? 'room_temp' : location.temp;
+  
   return {
     locationId: location.location_id,
     name: location.name,
-    temp: location.temp,
+    temp: temp,
     clinicId: location.clinic_id,
     createdAt: new Date(location.created_at),
     updatedAt: new Date(location.updated_at),

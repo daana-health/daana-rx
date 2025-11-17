@@ -96,6 +96,7 @@ export const typeDefs = `#graphql
     type: TransactionType!
     quantity: Int!
     unitId: ID!
+    patientName: String
     patientReferenceId: String
     userId: ID!
     notes: String
@@ -219,6 +220,7 @@ export const typeDefs = `#graphql
   input CheckOutInput {
     unitId: ID!
     quantity: Int!
+    patientName: String
     patientReferenceId: String
     notes: String
   }
