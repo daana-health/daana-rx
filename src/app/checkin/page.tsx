@@ -194,13 +194,13 @@ export default function CheckInPage() {
     refetchQueries: [{ query: GET_LOTS }],
     onCompleted: (data) => {
       setSelectedLotId(data.createLot.lotId);
-      setUseExistingLot(true); // Switch to using the newly created lot
       notifications.show({
         title: 'Success',
         message: 'Lot created successfully',
         color: 'green',
       });
-      // Don't auto-advance, let the Next button handle it
+      // Auto-advance to drug search step after creating lot
+      setActiveStep(1);
     },
     onError: (error) => {
       notifications.show({
