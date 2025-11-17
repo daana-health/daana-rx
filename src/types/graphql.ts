@@ -9,6 +9,7 @@ export interface DrugData {
   strengthUnit: string;
   ndcId: string;
   form: string;
+  inInventory?: boolean;
 }
 
 export interface LocationData {

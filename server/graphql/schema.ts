@@ -70,6 +70,7 @@ export const typeDefs = `#graphql
     strengthUnit: String!
     ndcId: String!
     form: String!
+    inInventory: Boolean
   }
 
   type Unit {
@@ -127,6 +128,7 @@ export const typeDefs = `#graphql
     strengthUnit: String!
     ndcId: String!
     form: String!
+    inInventory: Boolean
   }
 
   type PaginatedUnits {

@@ -164,6 +164,7 @@ export interface DrugSearchResult {
   strengthUnit: string;
   ndcId: string;
   form: string;
+  inInventory?: boolean;
 }
 
 export interface DashboardStats {

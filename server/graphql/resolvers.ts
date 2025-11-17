@@ -66,12 +66,22 @@ export const resolvers = {
     },
 
     // Drugs
-    searchDrugs: async (_: unknown, { query }: { query: string }) => {
-      return drugService.searchDrugsByName(query);
+    searchDrugs: async (
+      _: unknown,
+      { query }: { query: string },
+      context: GraphQLContext
+    ) => {
+      const { clinic } = requireAuth(context);
+      return drugService.searchDrugs(query, clinic.clinicId);
     },
 
-    searchDrugByNDC: async (_: unknown, { ndc }: { ndc: string }) => {
-      return drugService.searchDrugByNDC(ndc);
+    searchDrugByNDC: async (
+      _: unknown,
+      { ndc }: { ndc: string },
+      context: GraphQLContext
+    ) => {
+      const { clinic } = requireAuth(context);
+      return drugService.searchDrugByNDC(ndc, clinic.clinicId);
     },
 
     getDrug: async (_: unknown, { drugId }: { drugId: string }) => {

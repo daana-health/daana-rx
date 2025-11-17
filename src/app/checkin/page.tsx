@@ -31,7 +31,6 @@ import { IconQrcode } from '@tabler/icons-react';
 import {
   GetLocationsResponse,
   GetLotsResponse,
-  SearchDrugByNDCResponse,
   DrugData,
   LotData,
   LocationData,
@@ -69,9 +68,9 @@ const CREATE_LOT = gql`
   }
 `;
 
-const SEARCH_DRUG_BY_NDC = gql`
-  query SearchDrugByNDC($ndc: String!) {
-    searchDrugByNDC(ndc: $ndc) {
+const SEARCH_DRUGS = gql`
+  query SearchDrugs($query: String!) {
+    searchDrugs(query: $query) {
       drugId
       medicationName
       genericName
@@ -79,6 +78,7 @@ const SEARCH_DRUG_BY_NDC = gql`
       strengthUnit
       ndcId
       form
+      inInventory
     }
   }
 `;
@@ -110,15 +110,13 @@ export default function CheckInPage() {
   const [selectedLotId, setSelectedLotId] = useState<string>('');
   const [useExistingLot, setUseExistingLot] = useState(false);
 
-  // Drug search state
-  const [ndcInput, setNdcInput] = useState('');
-  const [ndcAutocompleteResults, setNdcAutocompleteResults] = useState<any[]>([]);
-  const [showNdcDropdown, setShowNdcDropdown] = useState(false);
-  const [searchingNdc, setSearchingNdc] = useState(false);
-  const [drugNameInput, setDrugNameInput] = useState('');
-  const [searchingRxNorm, setSearchingRxNorm] = useState(false);
-  const [rxNormResults, setRxNormResults] = useState<any[]>([]);
+  // Unified drug search state
+  const [searchInput, setSearchInput] = useState('');
+  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [showDropdown, setShowDropdown] = useState(false);
+  const [searching, setSearching] = useState(false);
   const [selectedDrug, setSelectedDrug] = useState<DrugData | null>(null);
+  const [showManualEntry, setShowManualEntry] = useState(false);
   const [manualDrug, setManualDrug] = useState<Omit<DrugData, 'drugId'>>({
     medicationName: '',
     genericName: '',
@@ -142,7 +140,7 @@ export default function CheckInPage() {
   // Queries
   const { data: locationsData } = useQuery<GetLocationsResponse>(GET_LOCATIONS);
   const { data: lotsData } = useQuery<GetLotsResponse>(GET_LOTS);
-  const { refetch: searchNDC } = useQuery<SearchDrugByNDCResponse>(SEARCH_DRUG_BY_NDC, {
+  const { refetch: searchDrugs } = useQuery(SEARCH_DRUGS, {
     skip: true,
   });
   
@@ -196,115 +194,62 @@ export default function CheckInPage() {
     }
   };
 
-  // Debounced NDC autocomplete search
+  // Debounced unified search
   useEffect(() => {
     const timeoutId = setTimeout(() => {
-      if (ndcInput.trim().length >= 3) {
-        handleNdcAutocomplete(ndcInput);
+      if (searchInput.trim().length >= 2) {
+        handleUnifiedSearch(searchInput);
       } else {
-        setNdcAutocompleteResults([]);
-        setShowNdcDropdown(false);
+        setSearchResults([]);
+        setShowDropdown(false);
       }
     }, 500); // 500ms debounce
 
     return () => clearTimeout(timeoutId);
-  }, [ndcInput]);
+  }, [searchInput]);
 
-  const handleNdcAutocomplete = async (searchTerm: string) => {
-    if (searchTerm.length < 3) return;
+  // Unified search using local database
+  const handleUnifiedSearch = async (searchTerm: string) => {
+    if (searchTerm.length < 2) return;
 
-    setSearchingNdc(true);
-    setNdcAutocompleteResults([]);
+    setSearching(true);
+    setSearchResults([]);
 
     try {
-      // Search RxNorm by approximate term to find drugs
-      const response = await fetch(
-        `https://rxnav.nlm.nih.gov/REST/approximateTerm.json?term=${encodeURIComponent(searchTerm)}&maxEntries=10`
-      );
-      const data = await response.json();
-
-      if (data.approximateGroup?.candidate) {
-        const candidates = Array.isArray(data.approximateGroup.candidate) 
-          ? data.approximateGroup.candidate 
-          : [data.approximateGroup.candidate];
-
-        const results = [];
-        
-        // Get details for each candidate
-        for (const candidate of candidates.slice(0, 5)) {
-          try {
-            const rxcui = candidate.rxcui;
-            
-            // Get drug properties
-            const propsResponse = await fetch(
-              `https://rxnav.nlm.nih.gov/REST/rxcui/${rxcui}/allProperties.json?prop=all`
-            );
-            const propsData = await propsResponse.json();
-
-            // Get NDCs
-            const ndcResponse = await fetch(
-              `https://rxnav.nlm.nih.gov/REST/rxcui/${rxcui}/ndcs.json`
-            );
-            const ndcData = await ndcResponse.json();
-
-            const properties = propsData.propConceptGroup?.propConcept || [];
-            const ndcs = ndcData.ndcGroup?.ndcList?.ndc || [];
-
-            const medicationName = properties.find((p: any) => p.propName === 'RxNorm Name')?.propValue || candidate.name;
-            const strength = properties.find((p: any) => p.propName === 'Strength')?.propValue || '';
-            const doseForm = properties.find((p: any) => p.propName === 'Dose Form')?.propValue || 'Tablet';
-
-            // Parse strength
-            const strengthMatch = strength.match(/(\d+\.?\d*)\s*(\w+)/);
-            const strengthNum = strengthMatch ? parseFloat(strengthMatch[1]) : 0;
-            const strengthUnit = strengthMatch ? strengthMatch[2] : 'mg';
-
-            if (ndcs.length > 0) {
-              results.push({
-                rxcui,
-                medicationName,
-                genericName: medicationName.split(' ')[0],
-                strength: strengthNum,
-                strengthUnit,
-                form: doseForm,
-                ndcId: ndcs[0],
-                displayText: `${medicationName} - NDC: ${ndcs[0]}`,
-              });
-            }
-          } catch (err) {
-            console.error(`Error fetching details for candidate:`, err);
-          }
-        }
-
-        setNdcAutocompleteResults(results);
-        setShowNdcDropdown(results.length > 0);
+      const result = await searchDrugs({ query: searchTerm });
+      if (result.data?.searchDrugs && result.data.searchDrugs.length > 0) {
+        setSearchResults(result.data.searchDrugs);
+        setShowDropdown(true);
       } else {
-        setShowNdcDropdown(false);
+        setSearchResults([]);
+        setShowDropdown(false);
+        // If NDC search with no results, prepopulate NDC in manual form
+        const cleanedNDC = searchTerm.replace(/[^0-9]/g, '');
+        if (cleanedNDC.length >= 10) {
+          setManualDrug({ ...manualDrug, ndcId: cleanedNDC });
+          setShowManualEntry(true);
+        }
       }
     } catch (error) {
-      console.error('NDC autocomplete error:', error);
-      setShowNdcDropdown(false);
+      console.error('Drug search error:', error);
+      setShowDropdown(false);
     } finally {
-      setSearchingNdc(false);
+      setSearching(false);
     }
   };
 
-  const handleSelectNdcAutocomplete = (drug: any) => {
-    setManualDrug({
-      medicationName: drug.medicationName,
-      genericName: drug.genericName,
-      strength: drug.strength,
-      strengthUnit: drug.strengthUnit,
-      ndcId: drug.ndcId,
-      form: drug.form,
-    });
-    setNdcInput(drug.ndcId);
-    setNdcAutocompleteResults([]);
-    setShowNdcDropdown(false);
+  const handleSelectDrug = (drug: any) => {
+    setSelectedDrug(drug);
+    setSearchInput(drug.ndcId);
+    setSearchResults([]);
+    setShowDropdown(false);
+    setShowManualEntry(false);
     notifications.show({
       title: 'Drug Selected',
-      message: `${drug.medicationName}`,
-      color: 'green',
+      message: drug.inInventory 
+        ? `${drug.medicationName} (Already in inventory)` 
+        : drug.medicationName,
+      color: drug.inInventory ? 'blue' : 'green',
     });
   };
 
@@ -375,166 +320,10 @@ export default function CheckInPage() {
     });
   };
 
-  const handleSearchNDC = async (ndc?: string) => {
-    const searchCode = ndc || ndcInput;
-    if (!searchCode.trim()) {
-      notifications.show({
-        title: 'Error',
-        message: 'Please enter an NDC code',
-        color: 'red',
-      });
-      return;
-    }
-
-    try {
-      const result = await searchNDC({ ndc: searchCode });
-      if (result.data?.searchDrugByNDC) {
-        setSelectedDrug(result.data.searchDrugByNDC);
-        setNdcInput(searchCode);
-        notifications.show({
-          title: 'Found',
-          message: `Found: ${result.data.searchDrugByNDC.medicationName}`,
-          color: 'green',
-        });
-      } else {
-        notifications.show({
-          title: 'Not Found',
-          message: 'Drug not found. Please enter manually.',
-          color: 'orange',
-        });
-      }
-    } catch (error) {
-      notifications.show({
-        title: 'Error',
-        message: 'Failed to search drug',
-        color: 'red',
-      });
-    }
-  };
-
-  const handleSearchRxNorm = async () => {
-    if (!drugNameInput.trim()) {
-      notifications.show({
-        title: 'Error',
-        message: 'Please enter a drug name',
-        color: 'red',
-      });
-      return;
-    }
-
-    setSearchingRxNorm(true);
-    setRxNormResults([]);
-
-    try {
-      // Step 1: Find RXCUI by drug name
-      const searchResponse = await fetch(
-        `https://rxnav.nlm.nih.gov/REST/rxcui.json?name=${encodeURIComponent(drugNameInput)}`
-      );
-      const searchData = await searchResponse.json();
-
-      if (!searchData.idGroup?.rxnormId || searchData.idGroup.rxnormId.length === 0) {
-        notifications.show({
-          title: 'Not Found',
-          message: 'No drugs found with that name. Try a different search term.',
-          color: 'orange',
-        });
-        setSearchingRxNorm(false);
-        return;
-      }
-
-      // Step 2: Get drug details and NDCs for each RXCUI
-      const results = [];
-      for (const rxcui of searchData.idGroup.rxnormId.slice(0, 5)) {
-        try {
-          // Get drug properties
-          const propsResponse = await fetch(
-            `https://rxnav.nlm.nih.gov/REST/rxcui/${rxcui}/allProperties.json?prop=all`
-          );
-          const propsData = await propsResponse.json();
-
-          // Get NDCs
-          const ndcResponse = await fetch(
-            `https://rxnav.nlm.nih.gov/REST/rxcui/${rxcui}/ndcs.json`
-          );
-          const ndcData = await ndcResponse.json();
-
-          const properties = propsData.propConceptGroup?.propConcept || [];
-          const ndcs = ndcData.ndcGroup?.ndcList?.ndc || [];
-
-          // Parse drug information
-          const medicationName = properties.find((p: any) => p.propName === 'RxNorm Name')?.propValue || '';
-          const strength = properties.find((p: any) => p.propName === 'Strength')?.propValue || '';
-          const doseForm = properties.find((p: any) => p.propName === 'Dose Form')?.propValue || 'Tablet';
-
-          // Parse strength into number and unit
-          const strengthMatch = strength.match(/(\d+\.?\d*)\s*(\w+)/);
-          const strengthNum = strengthMatch ? parseFloat(strengthMatch[1]) : 0;
-          const strengthUnit = strengthMatch ? strengthMatch[2] : 'mg';
-
-          if (medicationName && ndcs.length > 0) {
-            results.push({
-              rxcui,
-              medicationName,
-              genericName: medicationName.split(' ')[0],
-              strength: strengthNum,
-              strengthUnit,
-              form: doseForm,
-              ndcId: ndcs[0],
-              allNDCs: ndcs,
-            });
-          }
-        } catch (err) {
-          console.error(`Error fetching details for RXCUI ${rxcui}:`, err);
-        }
-      }
-
-      if (results.length > 0) {
-        setRxNormResults(results);
-        notifications.show({
-          title: 'Success',
-          message: `Found ${results.length} drug(s)`,
-          color: 'green',
-        });
-      } else {
-        notifications.show({
-          title: 'Not Found',
-          message: 'No drugs found with NDC information.',
-          color: 'orange',
-        });
-      }
-    } catch (error) {
-      notifications.show({
-        title: 'Error',
-        message: 'Failed to search RxNorm database',
-        color: 'red',
-      });
-      console.error('RxNorm search error:', error);
-    } finally {
-      setSearchingRxNorm(false);
-    }
-  };
-
-  const handleSelectRxNormDrug = (drug: any) => {
-    setManualDrug({
-      medicationName: drug.medicationName,
-      genericName: drug.genericName,
-      strength: drug.strength,
-      strengthUnit: drug.strengthUnit,
-      ndcId: drug.ndcId,
-      form: drug.form,
-    });
-    setRxNormResults([]);
-    setDrugNameInput('');
-    notifications.show({
-      title: 'Drug Selected',
-      message: `${drug.medicationName} - NDC: ${drug.ndcId}`,
-      color: 'green',
-    });
-  };
-
   const handleBarcodeScanned = (code: string) => {
     setShowBarcodeScanner(false);
-    handleSearchNDC(code);
+    setSearchInput(code);
+    // Search will be triggered automatically by the useEffect
   };
 
   const handleCreateUnit = () => {
@@ -571,8 +360,17 @@ export default function CheckInPage() {
     setSelectedLocationId('');
     setSelectedLotId('');
     setUseExistingLot(false);
-    setNdcInput('');
+    setSearchInput('');
     setSelectedDrug(null);
+    setShowManualEntry(false);
+    setManualDrug({
+      medicationName: '',
+      genericName: '',
+      strength: 0,
+      strengthUnit: 'mg',
+      ndcId: '',
+      form: 'Tablet',
+    });
     setTotalQuantity(0);
     setAvailableQuantity(0);
     setExpiryDate(null);
@@ -698,37 +496,28 @@ export default function CheckInPage() {
                 </Group>
 
                 <div style={{ position: 'relative' }}>
-                  <Group align="flex-end" gap="xs">
-                    <TextInput
-                      label="NDC or Drug Name"
-                      placeholder="Start typing drug name or NDC..."
-                      value={ndcInput}
-                      onChange={(e) => {
-                        setNdcInput(e.target.value);
-                        setShowNdcDropdown(true);
-                      }}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' && !showNdcDropdown) {
-                          handleSearchNDC();
-                        }
-                        if (e.key === 'Escape') {
-                          setShowNdcDropdown(false);
-                        }
-                      }}
-                      onFocus={() => {
-                        if (ndcAutocompleteResults.length > 0) {
-                          setShowNdcDropdown(true);
-                        }
-                      }}
-                      style={{ flex: 1 }}
-                      rightSection={searchingNdc ? <Loader size="xs" /> : null}
-                    />
-                    <Button onClick={() => handleSearchNDC()}>
-                      Search
-                    </Button>
-                  </Group>
+                  <TextInput
+                    label="Search by Drug Name or NDC"
+                    placeholder="Start typing drug name or NDC code..."
+                    value={searchInput}
+                    onChange={(e) => {
+                      setSearchInput(e.target.value);
+                      setShowDropdown(true);
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Escape') {
+                        setShowDropdown(false);
+                      }
+                    }}
+                    onFocus={() => {
+                      if (searchResults.length > 0) {
+                        setShowDropdown(true);
+                      }
+                    }}
+                    rightSection={searching ? <Loader size="xs" /> : null}
+                  />
 
-                  {showNdcDropdown && ndcAutocompleteResults.length > 0 && (
+                  {showDropdown && searchResults.length > 0 && (
                     <Card 
                       withBorder 
                       shadow="md"
@@ -738,23 +527,32 @@ export default function CheckInPage() {
                         width: '100%',
                         maxHeight: '300px',
                         overflowY: 'auto',
-                        marginTop: '4px'
+                        marginTop: '4px',
+                        backgroundColor: 'white'
                       }}
                     >
                       <Stack gap="xs">
-                        {ndcAutocompleteResults.map((drug, index) => (
+                        {searchResults.map((drug, index) => (
                           <Card
                             key={index}
                             padding="sm"
                             style={{ cursor: 'pointer' }}
-                            onClick={() => handleSelectNdcAutocomplete(drug)}
+                            onClick={() => handleSelectDrug(drug)}
                             withBorder
+                            bg={drug.inInventory ? 'blue.0' : 'white'}
                           >
-                            <Text fw={600} size="sm">{drug.medicationName}</Text>
-                            <Text size="xs" c="dimmed">
-                              {drug.strength} {drug.strengthUnit} - {drug.form}
-                            </Text>
-                            <Text size="xs" c="blue">NDC: {drug.ndcId}</Text>
+                            <Group justify="space-between">
+                              <div>
+                                <Text fw={600} size="sm">{drug.medicationName}</Text>
+                                <Text size="xs" c="dimmed">
+                                  {drug.strength} {drug.strengthUnit} - {drug.form}
+                                </Text>
+                                <Text size="xs" c="blue">NDC: {drug.ndcId}</Text>
+                              </div>
+                              {drug.inInventory && (
+                                <Text size="xs" c="blue" fw={700}>In Stock</Text>
+                              )}
+                            </Group>
                           </Card>
                         ))}
                       </Stack>
@@ -763,57 +561,40 @@ export default function CheckInPage() {
                 </div>
 
                 {selectedDrug && (
-                  <Card withBorder p="sm" bg="green.0">
-                    <Text fw={700}>{selectedDrug.medicationName}</Text>
-                    <Text size="sm">
-                      {selectedDrug.strength} {selectedDrug.strengthUnit} - {selectedDrug.form}
-                    </Text>
+                  <Card withBorder p="sm" bg={selectedDrug.inInventory ? "blue.0" : "green.0"}>
+                    <Group justify="space-between">
+                      <div>
+                        <Text fw={700}>{selectedDrug.medicationName}</Text>
+                        <Text size="sm">
+                          {selectedDrug.strength} {selectedDrug.strengthUnit} - {selectedDrug.form}
+                        </Text>
+                        <Text size="xs" c="dimmed">NDC: {selectedDrug.ndcId}</Text>
+                      </div>
+                      {selectedDrug.inInventory && (
+                        <Text size="sm" c="blue" fw={700}>Already in Inventory</Text>
+                      )}
+                    </Group>
                   </Card>
                 )}
 
-                <Title order={5} mt="md">Or search by drug name:</Title>
+                {!selectedDrug && (
+                  <>
+                    <Button
+                      variant="light"
+                      onClick={() => setShowManualEntry(!showManualEntry)}
+                      mt="md"
+                    >
+                      {showManualEntry ? 'Hide Manual Entry' : 'Enter Drug Manually'}
+                    </Button>
 
-                <Group align="flex-end" gap="xs">
-                  <TextInput
-                    label="Drug Name"
-                    placeholder="e.g., Lisinopril, Metformin"
-                    value={drugNameInput}
-                    onChange={(e) => setDrugNameInput(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        handleSearchRxNorm();
-                      }
-                    }}
-                    style={{ flex: 1 }}
-                  />
-                  <Button onClick={handleSearchRxNorm} loading={searchingRxNorm}>
-                    Search RxNorm
-                  </Button>
-                </Group>
-
-                {rxNormResults.length > 0 && (
-                  <Stack gap="xs">
-                    <Text size="sm" fw={500}>Select a drug:</Text>
-                    {rxNormResults.map((drug, index) => (
-                      <Card 
-                        key={index}
-                        withBorder 
-                        p="sm" 
-                        style={{ cursor: 'pointer' }}
-                        onClick={() => handleSelectRxNormDrug(drug)}
-                      >
-                        <Text fw={700}>{drug.medicationName}</Text>
-                        <Text size="sm" c="dimmed">
-                          {drug.strength} {drug.strengthUnit} - {drug.form}
-                        </Text>
-                        <Text size="xs" c="dimmed">NDC: {drug.ndcId}</Text>
-                      </Card>
-                    ))}
-                  </Stack>
+                    {showManualEntry && (
+                      <Title order={5} mt="md">Manual Drug Entry:</Title>
+                    )}
+                  </>
                 )}
 
-                <Title order={4} mt="md">Or enter manually:</Title>
-
+                {(showManualEntry || !selectedDrug) && showManualEntry && (
+                <>
                 <TextInput
                   label="Medication Name"
                   placeholder="e.g., Lisinopril 10mg Tablet"
@@ -891,6 +672,8 @@ export default function CheckInPage() {
                     }
                   />
                 </Group>
+                </>
+                )}
 
                 <Group justify="space-between" mt="xl">
                   <Button 
