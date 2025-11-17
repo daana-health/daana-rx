@@ -111,6 +111,9 @@ export default function CheckInPage() {
 
   // Drug search state
   const [ndcInput, setNdcInput] = useState('');
+  const [drugNameInput, setDrugNameInput] = useState('');
+  const [searchingRxNorm, setSearchingRxNorm] = useState(false);
+  const [rxNormResults, setRxNormResults] = useState<any[]>([]);
   const [selectedDrug, setSelectedDrug] = useState<DrugData | null>(null);
   const [manualDrug, setManualDrug] = useState<Omit<DrugData, 'drugId'>>({
     medicationName: '',
@@ -291,6 +294,126 @@ export default function CheckInPage() {
         color: 'red',
       });
     }
+  };
+
+  const handleSearchRxNorm = async () => {
+    if (!drugNameInput.trim()) {
+      notifications.show({
+        title: 'Error',
+        message: 'Please enter a drug name',
+        color: 'red',
+      });
+      return;
+    }
+
+    setSearchingRxNorm(true);
+    setRxNormResults([]);
+
+    try {
+      // Step 1: Find RXCUI by drug name
+      const searchResponse = await fetch(
+        `https://rxnav.nlm.nih.gov/REST/rxcui.json?name=${encodeURIComponent(drugNameInput)}`
+      );
+      const searchData = await searchResponse.json();
+
+      if (!searchData.idGroup?.rxnormId || searchData.idGroup.rxnormId.length === 0) {
+        notifications.show({
+          title: 'Not Found',
+          message: 'No drugs found with that name. Try a different search term.',
+          color: 'orange',
+        });
+        setSearchingRxNorm(false);
+        return;
+      }
+
+      // Step 2: Get drug details and NDCs for each RXCUI
+      const results = [];
+      for (const rxcui of searchData.idGroup.rxnormId.slice(0, 5)) {
+        try {
+          // Get drug properties
+          const propsResponse = await fetch(
+            `https://rxnav.nlm.nih.gov/REST/rxcui/${rxcui}/allProperties.json?prop=all`
+          );
+          const propsData = await propsResponse.json();
+
+          // Get NDCs
+          const ndcResponse = await fetch(
+            `https://rxnav.nlm.nih.gov/REST/rxcui/${rxcui}/ndcs.json`
+          );
+          const ndcData = await ndcResponse.json();
+
+          const properties = propsData.propConceptGroup?.propConcept || [];
+          const ndcs = ndcData.ndcGroup?.ndcList?.ndc || [];
+
+          // Parse drug information
+          const medicationName = properties.find((p: any) => p.propName === 'RxNorm Name')?.propValue || '';
+          const strength = properties.find((p: any) => p.propName === 'Strength')?.propValue || '';
+          const doseForm = properties.find((p: any) => p.propName === 'Dose Form')?.propValue || 'Tablet';
+
+          // Parse strength into number and unit
+          const strengthMatch = strength.match(/(\d+\.?\d*)\s*(\w+)/);
+          const strengthNum = strengthMatch ? parseFloat(strengthMatch[1]) : 0;
+          const strengthUnit = strengthMatch ? strengthMatch[2] : 'mg';
+
+          if (medicationName && ndcs.length > 0) {
+            results.push({
+              rxcui,
+              medicationName,
+              genericName: medicationName.split(' ')[0],
+              strength: strengthNum,
+              strengthUnit,
+              form: doseForm,
+              ndcId: ndcs[0],
+              allNDCs: ndcs,
+            });
+          }
+        } catch (err) {
+          console.error(`Error fetching details for RXCUI ${rxcui}:`, err);
+        }
+      }
+
+      if (results.length > 0) {
+        setRxNormResults(results);
+        notifications.show({
+          title: 'Success',
+          message: `Found ${results.length} drug(s)`,
+          color: 'green',
+        });
+      } else {
+        notifications.show({
+          title: 'Not Found',
+          message: 'No drugs found with NDC information.',
+          color: 'orange',
+        });
+      }
+    } catch (error) {
+      notifications.show({
+        title: 'Error',
+        message: 'Failed to search RxNorm database',
+        color: 'red',
+      });
+      console.error('RxNorm search error:', error);
+    } finally {
+      setSearchingRxNorm(false);
+    }
+  };
+
+  const handleSelectRxNormDrug = (drug: any) => {
+    setManualDrug({
+      medicationName: drug.medicationName,
+      genericName: drug.genericName,
+      strength: drug.strength,
+      strengthUnit: drug.strengthUnit,
+      ndcId: drug.ndcId,
+      form: drug.form,
+    });
+    setRxNormResults([]);
+    setDrugNameInput('');
+    notifications.show({
+      title: 'Drug Selected',
+      message: `${drug.medicationName} - NDC: ${drug.ndcId}`,
+      color: 'green',
+    });
   };
 
   const handleBarcodeScanned = (code: string) => {
@@ -485,7 +608,48 @@ export default function CheckInPage() {
                   </Card>
                 )}
 
-                <Title order={4}>Or enter manually:</Title>
+                <Title order={5} mt="md">Or search by drug name:</Title>
+
+                <Group align="flex-end" gap="xs">
+                  <TextInput
+                    label="Drug Name"
+                    placeholder="e.g., Lisinopril, Metformin"
+                    value={drugNameInput}
+                    onChange={(e) => setDrugNameInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        handleSearchRxNorm();
+                      }
+                    }}
+                    style={{ flex: 1 }}
+                  />
+                  <Button onClick={handleSearchRxNorm} loading={searchingRxNorm}>
+                    Search RxNorm
+                  </Button>
+                </Group>
+
+                {rxNormResults.length > 0 && (
+                  <Stack gap="xs">
+                    <Text size="sm" fw={500}>Select a drug:</Text>
+                    {rxNormResults.map((drug, index) => (
+                      <Card 
+                        key={index}
+                        withBorder 
+                        p="sm" 
+                        style={{ cursor: 'pointer' }}
+                        onClick={() => handleSelectRxNormDrug(drug)}
+                      >
+                        <Text fw={700}>{drug.medicationName}</Text>
+                        <Text size="sm" c="dimmed">
+                          {drug.strength} {drug.strengthUnit} - {drug.form}
+                        </Text>
+                        <Text size="xs" c="dimmed">NDC: {drug.ndcId}</Text>
+                      </Card>
+                    ))}
+                  </Stack>
+                )}
+
+                <Title order={4} mt="md">Or enter manually:</Title>
 
                 <TextInput
                   label="Medication Name"
