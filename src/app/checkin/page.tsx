@@ -174,8 +174,6 @@ export default function CheckInPage() {
   const isStep3Valid = () => {
     return (
       totalQuantity > 0 &&
-      availableQuantity > 0 &&
-      availableQuantity <= totalQuantity &&
       expiryDate !== null
     );
   };
@@ -720,18 +718,9 @@ export default function CheckInPage() {
                   onChange={(value) => {
                     const num = Number(value);
                     setTotalQuantity(num);
-                    if (availableQuantity === 0) {
-                      setAvailableQuantity(num);
-                    }
+                    // Automatically set available quantity to match total quantity
+                    setAvailableQuantity(num);
                   }}
-                />
-
-                <NumberInput
-                  label="Available Quantity"
-                  placeholder="100"
-                  required
-                  value={availableQuantity}
-                  onChange={(value) => setAvailableQuantity(Number(value))}
                 />
 
                 <DateInput
