@@ -10,7 +10,10 @@
     "start:server": "node dist/server/index.js",
     "lint": "next lint",
     "server": "tsx watch server/index.ts",
-    "dev:all": "concurrently \"npm run dev\" \"npm run server\""
+    "dev:all": "concurrently \"npm run dev\" \"npm run server\"",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage"
   },
   "dependencies": {
     "@apollo/client": "^3.11.0",
