@@ -160,7 +160,9 @@ export default function CheckInPage() {
       manualDrug.medicationName.trim() !== '' &&
       manualDrug.genericName.trim() !== '' &&
       manualDrug.strength > 0 &&
-      manualDrug.ndcId.trim() !== ''
+      manualDrug.strengthUnit.trim() !== '' &&
+      manualDrug.ndcId.trim() !== '' &&
+      manualDrug.form.trim() !== ''
     );
   };
 
@@ -512,12 +514,21 @@ export default function CheckInPage() {
                       setManualDrug({ ...manualDrug, strength: Number(value) })
                     }
                   />
-                  <TextInput
+                  <Select
                     label="Unit"
-                    placeholder="mg"
+                    placeholder="Select unit"
+                    required
+                    data={[
+                      { value: 'mg', label: 'mg (milligrams)' },
+                      { value: 'g', label: 'g (grams)' },
+                      { value: 'mcg', label: 'mcg (micrograms)' },
+                      { value: 'kg', label: 'kg (kilograms)' },
+                      { value: 'mL', label: 'mL (milliliters)' },
+                      { value: 'L', label: 'L (liters)' },
+                    ]}
                     value={manualDrug.strengthUnit}
-                    onChange={(e) =>
-                      setManualDrug({ ...manualDrug, strengthUnit: e.target.value })
+                    onChange={(value) =>
+                      setManualDrug({ ...manualDrug, strengthUnit: value || 'mg' })
                     }
                   />
                 </Group>
@@ -525,18 +536,31 @@ export default function CheckInPage() {
                 <Group grow>
                   <TextInput
                     label="NDC ID"
-                    placeholder="Optional"
+                    placeholder="Enter NDC code"
+                    required
                     value={manualDrug.ndcId}
                     onChange={(e) =>
                       setManualDrug({ ...manualDrug, ndcId: e.target.value })
                     }
                   />
-                  <TextInput
+                  <Select
                     label="Form"
-                    placeholder="Tablet"
+                    placeholder="Select form"
+                    required
+                    data={[
+                      { value: 'Tablet', label: 'Tablet' },
+                      { value: 'Capsule', label: 'Capsule' },
+                      { value: 'Liquid', label: 'Liquid' },
+                      { value: 'Injection', label: 'Injection' },
+                      { value: 'Cream', label: 'Cream' },
+                      { value: 'Ointment', label: 'Ointment' },
+                      { value: 'Patch', label: 'Patch' },
+                      { value: 'Inhaler', label: 'Inhaler' },
+                      { value: 'Suppository', label: 'Suppository' },
+                    ]}
                     value={manualDrug.form}
-                    onChange={(e) =>
-                      setManualDrug({ ...manualDrug, form: e.target.value })
+                    onChange={(value) =>
+                      setManualDrug({ ...manualDrug, form: value || 'Tablet' })
                     }
                   />
                 </Group>
