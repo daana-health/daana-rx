@@ -525,13 +525,19 @@ export default function CheckInPage() {
                         position: 'absolute', 
                         zIndex: 1000, 
                         width: '100%',
-                        maxHeight: '300px',
-                        overflowY: 'auto',
+                        maxHeight: '400px',
+                        overflowY: 'scroll',
                         marginTop: '4px',
-                        backgroundColor: 'white'
+                        backgroundColor: 'white',
+                        scrollbarWidth: 'thin',
                       }}
                     >
-                      <Stack gap="xs">
+                      <Stack gap="xs" p="xs">
+                        {searchResults.length > 5 && (
+                          <Text size="xs" c="dimmed" ta="center" pb="xs">
+                            Showing {searchResults.length} results - Scroll for more
+                          </Text>
+                        )}
                         {searchResults.map((drug, index) => (
                           <Card
                             key={index}
