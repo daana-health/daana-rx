@@ -8,10 +8,17 @@ const server = new ApolloServer({
   resolvers,
   introspection: true,
   formatError: (error) => {
-    console.error('GraphQL Error:', error);
+    console.error('GraphQL Error:', {
+      message: error.message,
+      code: error.extensions?.code,
+      path: error.path,
+      originalError: error.originalError?.message,
+      stack: error.stack,
+    });
     return {
       message: error.message,
       code: error.extensions?.code || 'INTERNAL_SERVER_ERROR',
+      extensions: error.extensions,
     };
   },
 });
@@ -37,7 +44,14 @@ async function handler(req: NextRequest) {
 
     // Handle the response based on kind
     if (result.body.kind === 'single') {
-      return NextResponse.json(result.body.singleResult, {
+      const singleResult = result.body.singleResult;
+      
+      // If there are errors, log them but still return 200 (GraphQL standard)
+      if (singleResult.errors && singleResult.errors.length > 0) {
+        console.error('GraphQL operation errors:', singleResult.errors);
+      }
+      
+      return NextResponse.json(singleResult, {
         status: 200,
         headers: {
           'Content-Type': 'application/json',
@@ -50,13 +64,13 @@ async function handler(req: NextRequest) {
       { errors: [{ message: 'Incremental responses not supported' }] },
       { status: 500 }
     );
-  } catch (error) {
+  } catch (error: any) {
     console.error('GraphQL request error:', error);
     return NextResponse.json(
       {
         errors: [
           {
-            message: 'Internal server error',
+            message: error?.message || 'Internal server error',
             extensions: { code: 'INTERNAL_SERVER_ERROR' },
           },
         ],

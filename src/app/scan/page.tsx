@@ -326,7 +326,7 @@ export default function ScanPage() {
           opened={showQRScanner}
           onClose={() => setShowQRScanner(false)}
           onScan={handleQRScanned}
-          title="Scan DaanaRx QR Code"
+          title="Scan DaanaRX QR Code"
           description="Scan the QR code on the medication unit to look it up"
         />
       </Stack>

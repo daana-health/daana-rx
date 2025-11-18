@@ -171,7 +171,26 @@ export const resolvers = {
     },
 
     signIn: async (_: unknown, { input }: { input: { email: string; password: string } }) => {
-      return authService.signIn(input.email, input.password);
+      try {
+        console.log('Sign in resolver called with email:', input.email);
+        const result = await authService.signIn(input.email, input.password);
+        console.log('Sign in resolver successful');
+        return result;
+      } catch (error: any) {
+        console.error('Sign in resolver error:', {
+          message: error?.message,
+          stack: error?.stack,
+          name: error?.name,
+        });
+        // Preserve the original error message
+        const errorMessage = error?.message || 'Sign in failed';
+        throw new GraphQLError(errorMessage, {
+          extensions: { 
+            code: 'UNAUTHENTICATED',
+            originalError: error?.message,
+          },
+        });
+      }
     },
 
     inviteUser: async (

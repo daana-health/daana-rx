@@ -1,4 +1,4 @@
-import { supabaseServer } from '../utils/supabase';
+import { supabaseServer, supabaseAuth } from '../utils/supabase';
 import { generateToken } from '../utils/auth';
 import { User, Clinic, AuthResponse } from '@/types';
 
@@ -91,69 +91,132 @@ export async function signUp(email: string, password: string, clinicName: string
  * Sign in an existing user
  */
 export async function signIn(email: string, password: string): Promise<AuthResponse> {
-  // Authenticate with Supabase Auth
-  const { data: authData, error: authError } = await supabaseServer.auth.signInWithPassword({
-    email,
-    password,
-  });
+  try {
+    // Validate inputs
+    if (!email || !password) {
+      throw new Error('Email and password are required');
+    }
 
-  if (authError || !authData.user) {
-    throw new Error(`Sign in failed: ${authError?.message || 'Invalid credentials'}`);
-  }
+    const normalizedEmail = email.trim().toLowerCase();
+    
+    console.log('Attempting sign in for email:', normalizedEmail);
+    
+    // Authenticate with Supabase Auth using anon key client
+    // Service role key doesn't work properly with signInWithPassword
+    const { data: authData, error: authError } = await supabaseAuth.auth.signInWithPassword({
+      email: normalizedEmail,
+      password,
+    });
 
-  const userId = authData.user.id;
+    if (authError) {
+      console.error('Auth error details:', {
+        message: authError.message,
+        status: authError.status,
+        name: authError.name,
+      });
+      throw new Error(`Sign in failed: ${authError.message || 'Invalid credentials'}`);
+    }
 
-  // Get user record
-  const { data: user, error: userError } = await supabaseServer
-    .from('users')
-    .select('*')
-    .eq('user_id', userId)
-    .single();
+    if (!authData) {
+      console.error('No auth data returned from signInWithPassword');
+      throw new Error('Sign in failed: No authentication data returned');
+    }
 
-  if (userError || !user) {
-    throw new Error('User record not found');
-  }
+    if (!authData.user) {
+      console.error('No user in auth data:', authData);
+      throw new Error('Sign in failed: No user data returned');
+    }
 
-  // Get clinic
-  const { data: clinic, error: clinicError } = await supabaseServer
-    .from('clinics')
-    .select('*')
-    .eq('clinic_id', user.clinic_id)
-    .single();
+    const userId = authData.user.id;
+    console.log('Authentication successful for user ID:', userId);
 
-  if (clinicError || !clinic) {
-    throw new Error('Clinic not found');
-  }
+    // Get user record
+    console.log('Fetching user record for user_id:', userId);
+    const { data: user, error: userError } = await supabaseServer
+      .from('users')
+      .select('*')
+      .eq('user_id', userId)
+      .single();
 
-  // Generate JWT token
-  const token = generateToken({
-    userId: user.user_id,
-    clinicId: user.clinic_id,
-    userRole: user.user_role,
-  });
+    if (userError) {
+      console.error('User query error details:', {
+        message: userError.message,
+        code: userError.code,
+        details: userError.details,
+        hint: userError.hint,
+      });
+      throw new Error(`User record not found: ${userError.message}`);
+    }
 
-  return {
-    token,
-    user: {
+    if (!user) {
+      console.error('User query returned null/undefined for user_id:', userId);
+      throw new Error('User record not found');
+    }
+
+    console.log('User record found:', { userId: user.user_id, email: user.email, clinicId: user.clinic_id });
+
+    // Get clinic
+    console.log('Fetching clinic record for clinic_id:', user.clinic_id);
+    const { data: clinic, error: clinicError } = await supabaseServer
+      .from('clinics')
+      .select('*')
+      .eq('clinic_id', user.clinic_id)
+      .single();
+
+    if (clinicError) {
+      console.error('Clinic query error details:', {
+        message: clinicError.message,
+        code: clinicError.code,
+        details: clinicError.details,
+        hint: clinicError.hint,
+      });
+      throw new Error(`Clinic not found: ${clinicError.message}`);
+    }
+
+    if (!clinic) {
+      console.error('Clinic query returned null/undefined for clinic_id:', user.clinic_id);
+      throw new Error('Clinic not found');
+    }
+
+    console.log('Clinic record found:', { clinicId: clinic.clinic_id, name: clinic.name });
+
+    // Generate JWT token
+    const token = generateToken({
       userId: user.user_id,
-      username: user.username,
-      password: '',
-      email: user.email,
       clinicId: user.clinic_id,
       userRole: user.user_role,
-      createdAt: new Date(user.created_at),
-      updatedAt: new Date(user.updated_at),
-    },
-    clinic: {
-      clinicId: clinic.clinic_id,
-      name: clinic.name,
-      primaryColor: clinic.primary_color,
-      secondaryColor: clinic.secondary_color,
-      logoUrl: clinic.logo_url,
-      createdAt: new Date(clinic.created_at),
-      updatedAt: new Date(clinic.updated_at),
-    },
-  };
+    });
+
+    return {
+      token,
+      user: {
+        userId: user.user_id,
+        username: user.username,
+        password: '',
+        email: user.email,
+        clinicId: user.clinic_id,
+        userRole: user.user_role,
+        createdAt: new Date(user.created_at),
+        updatedAt: new Date(user.updated_at),
+      },
+      clinic: {
+        clinicId: clinic.clinic_id,
+        name: clinic.name,
+        primaryColor: clinic.primary_color,
+        secondaryColor: clinic.secondary_color,
+        logoUrl: clinic.logo_url,
+        createdAt: new Date(clinic.created_at),
+        updatedAt: new Date(clinic.updated_at),
+      },
+    };
+  } catch (error: any) {
+    console.error('Sign in error:', error);
+    // Re-throw with a user-friendly message
+    if (error.message) {
+      throw error;
+    }
+    throw new Error(`Sign in failed: ${error.message || 'Unknown error'}`);
+  }
 }
 
 /**

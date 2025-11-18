@@ -49,6 +49,15 @@ function SignInContent() {
 
   const [signIn, { loading }] = useMutation(SIGN_IN_MUTATION, {
     onCompleted: (data) => {
+      if (!data?.signIn) {
+        notifications.show({
+          title: 'Error',
+          message: 'Invalid response from server',
+          color: 'red',
+        });
+        return;
+      }
+
       setIsRedirecting(true);
       dispatch(setAuth({
         user: data.signIn.user,
@@ -68,9 +77,17 @@ function SignInContent() {
       }, 100);
     },
     onError: (error) => {
+      console.error('Sign in mutation error:', error);
+      // Extract error message from GraphQL error
+      const errorMessage = 
+        error.graphQLErrors?.[0]?.message || 
+        error.networkError?.message || 
+        error.message || 
+        'Incorrect email or password';
+      
       notifications.show({
         title: 'Error',
-        message: error.message || 'Incorrect email or password',
+        message: errorMessage,
         color: 'red',
       });
     },
@@ -84,7 +101,7 @@ function SignInContent() {
   return (
     <Container size={420} my={40}>
       <Title ta="center" mb="md">
-        DaanaRx
+        DaanaRX
       </Title>
       <Text c="dimmed" size="sm" ta="center" mb="xl">
         Medication Tracking System

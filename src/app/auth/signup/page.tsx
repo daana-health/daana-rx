@@ -124,7 +124,7 @@ function AcceptInvitationForm({ invitationToken }: { invitationToken: string }) 
 
       notifications.show({
         title: 'Success',
-        message: 'Welcome to DaanaRx!',
+        message: 'Welcome to DaanaRX!',
         color: 'green',
       });
 
@@ -168,7 +168,7 @@ function AcceptInvitationForm({ invitationToken }: { invitationToken: string }) 
     return (
       <Container size={420} my={40}>
         <Title ta="center" mb="md">
-          DaanaRx
+          DaanaRX
         </Title>
 
         <Paper withBorder shadow="md" p={30} radius="md">

@@ -87,7 +87,7 @@ export function AppShell({ children }: AppShellProps) {
           <Group>
             <Burger opened={opened} onClick={toggle} hiddenFrom="sm" size="sm" />
             <Text size="xl" fw={700}>
-              {clinic?.name || 'DaanaRx'}
+              DaanaRX
             </Text>
           </Group>
           <Group>

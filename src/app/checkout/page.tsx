@@ -2,7 +2,7 @@
 
 import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { useLazyQuery, useMutation, gql } from '@apollo/client';
+import { useLazyQuery, useMutation, useQuery, gql } from '@apollo/client';
 import {
   Stack,
   Title,
@@ -15,13 +15,14 @@ import {
   Group,
   Table,
   Badge,
+  Alert,
 } from '@mantine/core';
 import { notifications } from '@mantine/notifications';
 import { AppShell } from '../../components/layout/AppShell';
 import { PageHeader } from '../../components/PageHeader';
 import { QRScanner } from '../../components/QRScanner';
 import { GetUnitResponse, SearchUnitsResponse, UnitData } from '../../types/graphql';
-import { IconQrcode } from '@tabler/icons-react';
+import { IconQrcode, IconAlertCircle } from '@tabler/icons-react';
 
 const GET_UNIT = gql`
   query GetUnit($unitId: ID!) {
@@ -56,7 +57,17 @@ const SEARCH_UNITS = gql`
       drug {
         medicationName
         genericName
+        strength
+        strengthUnit
       }
+    }
+  }
+`;
+
+const GET_DASHBOARD_STATS = gql`
+  query GetDashboardStats {
+    getDashboardStats {
+      totalUnits
     }
   }
 `;
@@ -80,6 +91,10 @@ function CheckOutContent() {
   const [patientReference, setPatientReference] = useState('');
   const [notes, setNotes] = useState('');
   const [showQRScanner, setShowQRScanner] = useState(false);
+
+  // Check if inventory is empty
+  const { data: dashboardData, loading: loadingStats } = useQuery(GET_DASHBOARD_STATS);
+  const hasInventory = dashboardData?.getDashboardStats?.totalUnits > 0;
 
   const [getUnit, { loading: loadingUnit }] = useLazyQuery<GetUnitResponse>(GET_UNIT, {
     onCompleted: (data) => {
@@ -199,6 +214,12 @@ function CheckOutContent() {
       <Stack gap="xl">
         <PageHeader title="Check Out" description="Dispense medications to patients" />
 
+        {!loadingStats && !hasInventory && (
+          <Alert icon={<IconAlertCircle size={16} />} title="No Inventory" color="yellow" variant="filled">
+            There are no medications in your inventory. Please check in medications before checking them out.
+          </Alert>
+        )}
+
         <Card shadow="sm" padding="lg" radius="md" withBorder>
           <Stack>
             <Group>
@@ -213,8 +234,8 @@ function CheckOutContent() {
 
             <Group align="flex-end" gap="xs">
               <TextInput
-                label="Unit ID"
-                placeholder="Enter unit ID manually"
+                label="Search by Unit ID, Generic Name, or Strength"
+                placeholder="Enter unit ID, generic name (e.g., Lisinopril), or strength (e.g., 10)"
                 value={unitId}
                 onChange={(e) => setUnitId(e.target.value)}
                 onKeyPress={(e) => {
@@ -223,6 +244,7 @@ function CheckOutContent() {
                   }
                 }}
                 style={{ flex: 1 }}
+                description="Search by unit ID, medication generic name, or strength value"
               />
               <Button onClick={handleSearch} loading={loadingUnit}>
                 Search
@@ -238,6 +260,8 @@ function CheckOutContent() {
                   <Table.Thead>
                     <Table.Tr>
                       <Table.Th>Medication</Table.Th>
+                      <Table.Th>Generic Name</Table.Th>
+                      <Table.Th>Strength</Table.Th>
                       <Table.Th>Available</Table.Th>
                       <Table.Th>Expiry</Table.Th>
                       <Table.Th>Action</Table.Th>
@@ -247,6 +271,10 @@ function CheckOutContent() {
                     {searchData.searchUnitsByQuery.map((unit: UnitData) => (
                       <Table.Tr key={unit.unitId}>
                         <Table.Td>{unit.drug.medicationName}</Table.Td>
+                        <Table.Td>{unit.drug.genericName}</Table.Td>
+                        <Table.Td>
+                          {unit.drug.strength} {unit.drug.strengthUnit}
+                        </Table.Td>
                         <Table.Td>{unit.availableQuantity}</Table.Td>
                         <Table.Td>{new Date(unit.expiryDate).toLocaleDateString()}</Table.Td>
                         <Table.Td>
@@ -375,7 +403,7 @@ function CheckOutContent() {
           opened={showQRScanner}
           onClose={() => setShowQRScanner(false)}
           onScan={handleQRScanned}
-          title="Scan DaanaRx QR Code"
+          title="Scan DaanaRX QR Code"
           description="Scan the QR code on the medication unit to check it out"
         />
       </Stack>

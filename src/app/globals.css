@@ -1,0 +1,41 @@
+/* Override Mantine calendar weekend styling - weekends should not be red */
+.mantine-Calendar-day[data-weekend],
+.mantine-DateInput-calendar [data-weekend],
+.mantine-DatePickerInput-calendar [data-weekend],
+.mantine-DateInput-dropdown [data-weekend],
+.mantine-DatePickerInput-dropdown [data-weekend],
+[data-weekend] {
+  color: var(--mantine-color-text) !important;
+}
+
+/* Also handle the hover state */
+.mantine-Calendar-day[data-weekend]:hover,
+.mantine-DateInput-calendar [data-weekend]:hover,
+.mantine-DatePickerInput-calendar [data-weekend]:hover,
+.mantine-DateInput-dropdown [data-weekend]:hover,
+.mantine-DatePickerInput-dropdown [data-weekend]:hover,
+[data-weekend]:hover {
+  background-color: var(--mantine-color-gray-1);
+  color: var(--mantine-color-text) !important;
+}
+
+/* Handle selected weekend days */
+.mantine-Calendar-day[data-weekend][data-selected],
+.mantine-DateInput-calendar [data-weekend][data-selected],
+.mantine-DatePickerInput-calendar [data-weekend][data-selected],
+.mantine-DateInput-dropdown [data-weekend][data-selected],
+.mantine-DatePickerInput-dropdown [data-weekend][data-selected],
+[data-weekend][data-selected] {
+  background-color: var(--mantine-color-blue-filled);
+  color: var(--mantine-color-white) !important;
+}
+
+/* Handle disabled weekend days */
+.mantine-Calendar-day[data-weekend][data-disabled],
+.mantine-DateInput-calendar [data-weekend][data-disabled],
+.mantine-DatePickerInput-calendar [data-weekend][data-disabled],
+[data-weekend][data-disabled] {
+  color: var(--mantine-color-dimmed) !important;
+  opacity: 0.5;
+}
+

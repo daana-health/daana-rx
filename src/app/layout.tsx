@@ -1,11 +1,12 @@
 import '@mantine/core/styles.css';
 import '@mantine/notifications/styles.css';
 import '@mantine/dates/styles.css';
+import './globals.css';
 import { ColorSchemeScript } from '@mantine/core';
 import { Providers } from '../components/Providers';
 
 export const metadata = {
-  title: 'DaanaRx - Medication Tracking System',
+  title: 'DaanaRX - Medication Tracking System',
   description: 'HIPAA-compliant medication tracking for non-profit clinics',
 };
 

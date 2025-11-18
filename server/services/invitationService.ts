@@ -1,4 +1,4 @@
-import { supabaseServer } from '../utils/supabase';
+import { supabaseServer, supabaseAuth } from '../utils/supabase';
 import type { Invitation } from '@/types';
 
 export interface SendInvitationInput {
@@ -242,8 +242,8 @@ export const invitationService = {
       throw new Error(`Failed to fetch clinic: ${clinicError.message}`);
     }
 
-    // Sign in the user to get a token
-    const { data: signInData, error: signInError } = await supabaseServer.auth.signInWithPassword({
+    // Sign in the user to get a token using anon key client
+    const { data: signInData, error: signInError } = await supabaseAuth.auth.signInWithPassword({
       email: invitation.email,
       password,
     });

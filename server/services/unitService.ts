@@ -158,25 +158,100 @@ export async function getUnits(
 
 /**
  * Search units by query (for quick lookup)
+ * Searches by unit ID, medication name, generic name, and strength
  */
 export async function searchUnits(query: string, clinicId: string): Promise<Unit[]> {
-  const { data: units, error } = await supabaseServer
-    .from('units')
-    .select(`
-      *,
-      drug:drugs(*),
-      lot:lots(*),
-      user:users(*)
-    `)
-    .eq('clinic_id', clinicId)
-    .or(`unit_id.ilike.%${query}%,drug.generic_name.ilike.%${query}%`)
-    .limit(10);
-
-  if (error) {
-    throw new Error(`Failed to search units: ${error.message}`);
+  // Validate input
+  if (!query || typeof query !== 'string') {
+    return [];
   }
 
-  return units?.map(formatUnit) || [];
+  const trimmedQuery = query.trim();
+  if (trimmedQuery.length < 2) {
+    return [];
+  }
+
+  const queryLower = trimmedQuery.toLowerCase();
+  const isNumeric = !isNaN(Number(queryLower)) && queryLower.length > 0;
+  const numericValue = isNumeric ? Number(queryLower) : null;
+
+  // Determine if query looks like a UUID (36 chars with hyphens) or partial UUID
+  const looksLikeUnitId = trimmedQuery.length >= 8 && /^[a-f0-9-]+$/i.test(trimmedQuery);
+  
+  try {
+    // Fetch units with available quantity
+    let queryBuilder = supabaseServer
+      .from('units')
+      .select(`
+        *,
+        drug:drugs(*),
+        lot:lots(*),
+        user:users(*)
+      `)
+      .eq('clinic_id', clinicId)
+      .gt('available_quantity', 0);
+
+    if (looksLikeUnitId) {
+      // If it looks like a unit ID, filter by it for better performance
+      // Escape the query to prevent SQL injection-like issues
+      const escapedQuery = trimmedQuery.replace(/%/g, '\\%').replace(/_/g, '\\_');
+      queryBuilder = queryBuilder.ilike('unit_id', `%${escapedQuery}%`);
+    } else {
+      // For non-UUID queries, fetch a reasonable number of recent units
+      queryBuilder = queryBuilder.order('date_created', { ascending: false });
+    }
+    
+    // Limit to reasonable number for filtering
+    const limit = looksLikeUnitId ? 50 : 100;
+    const { data: units, error } = await queryBuilder.limit(limit);
+
+    if (error) {
+      console.error('Error searching units:', error);
+      throw new Error(`Failed to search units: ${error.message}`);
+    }
+
+    if (!units || units.length === 0) {
+      return [];
+    }
+
+    // Filter units in JavaScript for more flexible searching
+    const filteredUnits = units.filter((unit: any) => {
+      const drug = unit.drug;
+      if (!drug) return false;
+
+      // Check unit ID match
+      const unitIdMatch = unit.unit_id && unit.unit_id.toLowerCase().includes(queryLower);
+
+      // Check medication name match
+      const medicationMatch = drug.medication_name && 
+                              drug.medication_name.toLowerCase().includes(queryLower);
+
+      // Check generic name match
+      const genericMatch = drug.generic_name && 
+                          drug.generic_name.toLowerCase().includes(queryLower);
+
+      // Check strength match (if query is numeric or contains numbers)
+      let strengthMatch = false;
+      if (numericValue !== null) {
+        // Exact match or partial match (e.g., "10" matches 10.0)
+        strengthMatch = drug.strength === numericValue || 
+                       String(drug.strength).includes(queryLower);
+      } else if (drug.strength !== null && drug.strength !== undefined) {
+        // Text search might contain strength (e.g., "10mg" or "lisinopril 10")
+        const strengthStr = String(drug.strength);
+        strengthMatch = strengthStr.includes(queryLower) || 
+                       queryLower.includes(strengthStr);
+      }
+
+      return unitIdMatch || medicationMatch || genericMatch || strengthMatch;
+    });
+
+    // Limit results to 20
+    return filteredUnits.slice(0, 20).map(formatUnit);
+  } catch (error: any) {
+    console.error('Error in searchUnits:', error);
+    throw new Error(`Failed to search units: ${error.message || 'Unknown error'}`);
+  }
 }
 
 /**
