@@ -21,7 +21,7 @@ export function QRScanner({
   description = 'Position the QR code within the frame',
 }: QRScannerProps) {
   const scannerRef = useRef<Html5Qrcode | null>(null);
-  const [isScanning, setIsScanning] = useState(false);
+  const [, setIsScanning] = useState(false);
   const [error, setError] = useState<string>('');
   const [showManualInput, setShowManualInput] = useState(false);
   const [manualCode, setManualCode] = useState('');

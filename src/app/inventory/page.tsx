@@ -20,7 +20,6 @@ import {
   Select,
   ActionIcon,
   Menu,
-  Tooltip,
   Alert,
   Divider,
 } from '@mantine/core';
@@ -28,7 +27,6 @@ import {
   IconInfoCircle,
   IconDotsVertical,
   IconShoppingCartOff,
-  IconTrash,
   IconAlertTriangle,
   IconQrcode,
   IconPrinter,
@@ -36,7 +34,7 @@ import {
 import { notifications } from '@mantine/notifications';
 import { AppShell } from '../../components/layout/AppShell';
 import { PageHeader } from '../../components/PageHeader';
-import { GetUnitsResponse, UnitData, GetTransactionsResponse, TransactionData, GetLocationsResponse, LocationData } from '../../types/graphql';
+import { TransactionData, GetLocationsResponse, LocationData, DrugData } from '../../types/graphql';
 import { QRCodeSVG } from 'qrcode.react';
 import { useReactToPrint } from 'react-to-print';
 
@@ -111,8 +109,14 @@ const CHECK_OUT_UNIT = gql`
   }
 `;
 
-// Extended UnitData to include location
-interface UnitDataWithLocation extends UnitData {
+// Unit data with location info
+interface UnitDataWithLocation {
+  unitId: string;
+  totalQuantity: number;
+  availableQuantity: number;
+  expiryDate: string;
+  optionalNotes?: string | null;
+  drug: DrugData;
   lot?: {
     source: string;
     location?: {

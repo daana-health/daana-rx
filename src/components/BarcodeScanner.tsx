@@ -22,7 +22,7 @@ export function BarcodeScanner({
 }: BarcodeScannerProps) {
   const scannerId = 'barcode-reader';
   const scannerRef = useRef<Html5Qrcode | null>(null);
-  const [isScanning, setIsScanning] = useState(false);
+  const [, setIsScanning] = useState(false);
   const [error, setError] = useState<string>('');
   const [showManualInput, setShowManualInput] = useState(false);
   const [manualCode, setManualCode] = useState('');
