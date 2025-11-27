@@ -86,7 +86,7 @@ export async function getTransactions(
     .from('transactions')
     .select(`
       *,
-      unit:units(*, drug:drugs(*)),
+      unit:units(*, drug:drugs(*), lot:lots(*, location:locations(*))),
       user:users(*)
     `, { count: 'exact' })
     .eq('clinic_id', clinicId);
@@ -204,8 +204,8 @@ export async function updateTransaction(
 /**
  * Format transaction data from database
  */
-function formatTransaction(transaction: any): Transaction {
-  return {
+function formatTransaction(transaction: any): any {
+  const formatted: any = {
     transactionId: transaction.transaction_id,
     timestamp: new Date(transaction.timestamp),
     type: transaction.type,
@@ -217,4 +217,69 @@ function formatTransaction(transaction: any): Transaction {
     notes: transaction.notes,
     clinicId: transaction.clinic_id,
   };
+
+  // Include user if available
+  if (transaction.user) {
+    formatted.user = {
+      userId: transaction.user.user_id,
+      username: transaction.user.username,
+      email: transaction.user.email,
+      clinicId: transaction.user.clinic_id,
+      userRole: transaction.user.user_role,
+      createdAt: new Date(transaction.user.created_at),
+      updatedAt: new Date(transaction.user.updated_at),
+    };
+  }
+
+  // Include unit if available
+  if (transaction.unit) {
+    formatted.unit = {
+      unitId: transaction.unit.unit_id,
+      totalQuantity: transaction.unit.total_quantity,
+      availableQuantity: transaction.unit.available_quantity,
+      expiryDate: transaction.unit.expiry_date,
+      optionalNotes: transaction.unit.optional_notes,
+      lotId: transaction.unit.lot_id,
+      drugId: transaction.unit.drug_id,
+      userId: transaction.unit.user_id,
+      clinicId: transaction.unit.clinic_id,
+    };
+
+    // Include drug if available
+    if (transaction.unit.drug) {
+      formatted.unit.drug = {
+        drugId: transaction.unit.drug.drug_id,
+        medicationName: transaction.unit.drug.medication_name,
+        genericName: transaction.unit.drug.generic_name,
+        strength: transaction.unit.drug.strength,
+        strengthUnit: transaction.unit.drug.strength_unit,
+        ndcId: transaction.unit.drug.ndc_id,
+        form: transaction.unit.drug.form,
+      };
+    }
+
+    // Include lot if available
+    if (transaction.unit.lot) {
+      formatted.unit.lot = {
+        lotId: transaction.unit.lot.lot_id,
+        source: transaction.unit.lot.source,
+        note: transaction.unit.lot.note,
+        dateCreated: transaction.unit.lot.date_created,
+        locationId: transaction.unit.lot.location_id,
+        clinicId: transaction.unit.lot.clinic_id,
+      };
+
+      // Include location if available
+      if (transaction.unit.lot.location) {
+        formatted.unit.lot.location = {
+          locationId: transaction.unit.lot.location.location_id,
+          name: transaction.unit.lot.location.name,
+          temp: transaction.unit.lot.location.temp,
+          clinicId: transaction.unit.lot.location.clinic_id,
+        };
+      }
+    }
+  }
+
+  return formatted;
 }

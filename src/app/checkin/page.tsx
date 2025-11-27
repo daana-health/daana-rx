@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useQuery, useMutation, gql } from '@apollo/client';
 import { useSelector } from 'react-redux';
 import { useRouter } from 'next/navigation';
@@ -19,15 +19,17 @@ import {
   Modal,
   Alert,
   Loader,
+  Center,
 } from '@mantine/core';
 import { DateInput } from '@mantine/dates';
 import { notifications } from '@mantine/notifications';
-import { IconAlertCircle } from '@tabler/icons-react';
+import { IconAlertCircle, IconPrinter } from '@tabler/icons-react';
 import { AppShell } from '../../components/layout/AppShell';
 import { PageHeader } from '../../components/PageHeader';
 import { QRCodeSVG } from 'qrcode.react';
 import { BarcodeScanner } from '../../components/BarcodeScanner';
 import { IconQrcode } from '@tabler/icons-react';
+import { useReactToPrint } from 'react-to-print';
 import {
   GetLocationsResponse,
   GetLotsResponse,
@@ -136,12 +138,33 @@ export default function CheckInPage() {
   
   // Scanner state
   const [showBarcodeScanner, setShowBarcodeScanner] = useState(false);
+  
+  // Print ref
+  const printRef = useRef<HTMLDivElement | null>(null);
 
   // Queries
   const { data: locationsData } = useQuery<GetLocationsResponse>(GET_LOCATIONS);
   const { data: lotsData } = useQuery<GetLotsResponse>(GET_LOTS);
   const { refetch: searchDrugs } = useQuery(SEARCH_DRUGS, {
     skip: true,
+  });
+  
+  // Print handler
+  const handlePrint = useReactToPrint({
+    contentRef: printRef,
+    documentTitle: `DaanaRX-Label-${createdUnitId}`,
+    pageStyle: `
+      @page {
+        size: 4in 2in;
+        margin: 0;
+      }
+      @media print {
+        body {
+          margin: 0;
+          padding: 0;
+        }
+      }
+    `,
   });
   
   // Check if there are any locations
@@ -763,15 +786,107 @@ export default function CheckInPage() {
           onClose={() => setShowQRModal(false)}
           title="Unit Created Successfully"
           centered
-          size="md"
+          size="lg"
         >
-          <Stack align="center">
-            <Text>Unit ID: {createdUnitId}</Text>
-            {createdUnitId && (
-              <QRCodeSVG value={createdUnitId} size={256} level="H" />
-            )}
-            <Group>
-              <Button onClick={() => window.print()}>Print Label</Button>
+          <Stack>
+            <Alert color="green" variant="light">
+              Unit has been added to inventory. Print the label below and attach it to the medication.
+            </Alert>
+            
+            {/* Printable Label */}
+            <Center>
+              <div ref={printRef}>
+                <div style={{ 
+                  display: 'flex', 
+                  border: '1px solid #ddd', 
+                  padding: '12px',
+                  backgroundColor: 'white',
+                  fontFamily: 'Arial, sans-serif',
+                  width: '384px',
+                  height: '192px',
+                  boxSizing: 'border-box',
+                }}>
+                  {/* QR Code - Left Side */}
+                  <div style={{ 
+                    display: 'flex', 
+                    flexDirection: 'column', 
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    paddingRight: '12px',
+                    borderRight: '1px solid #ddd',
+                    minWidth: '130px',
+                  }}>
+                    <QRCodeSVG value={createdUnitId} size={100} level="H" />
+                    <div style={{ fontSize: '6px', marginTop: '4px', textAlign: 'center', wordBreak: 'break-all', maxWidth: '100px', lineHeight: 1.2 }}>
+                      {createdUnitId}
+                    </div>
+                  </div>
+                  
+                  {/* Label Information - Right Side (US Medicine Labelling) */}
+                  <div style={{ 
+                    flex: 1, 
+                    paddingLeft: '12px',
+                    fontSize: '9px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    overflow: 'hidden',
+                  }}>
+                    {/* Drug Name - Most Prominent */}
+                    <div style={{ fontSize: '12px', fontWeight: 'bold', lineHeight: 1.1, marginBottom: '1px' }}>
+                      {selectedDrug?.medicationName || manualDrug.medicationName}
+                    </div>
+                    <div style={{ fontSize: '9px', color: '#666', marginBottom: '3px' }}>
+                      ({selectedDrug?.genericName || manualDrug.genericName})
+                    </div>
+                    
+                    {/* Strength and Form */}
+                    <div style={{ fontSize: '10px', fontWeight: '600', marginBottom: '3px' }}>
+                      {selectedDrug?.strength || manualDrug.strength} {selectedDrug?.strengthUnit || manualDrug.strengthUnit} - {selectedDrug?.form || manualDrug.form}
+                    </div>
+                    
+                    {/* NDC */}
+                    <div style={{ marginBottom: '2px' }}>
+                      <span style={{ fontWeight: '600' }}>NDC: </span>
+                      {selectedDrug?.ndcId || manualDrug.ndcId}
+                    </div>
+                    
+                    {/* Quantity */}
+                    <div style={{ marginBottom: '2px' }}>
+                      <span style={{ fontWeight: '600' }}>Qty: </span>
+                      {totalQuantity}
+                    </div>
+                    
+                    {/* Expiry - Required by US Law */}
+                    <div style={{ marginBottom: '2px' }}>
+                      <span style={{ fontWeight: '600' }}>EXP: </span>
+                      {expiryDate ? new Date(expiryDate).toLocaleDateString('en-US', { month: '2-digit', year: 'numeric' }) : 'N/A'}
+                    </div>
+                    
+                    {/* Lot/Source */}
+                    <div style={{ marginBottom: '2px' }}>
+                      <span style={{ fontWeight: '600' }}>LOT: </span>
+                      {lotSource || 'N/A'}
+                    </div>
+                    
+                    {/* Footer - Organization */}
+                    <div style={{ 
+                      fontSize: '7px', 
+                      color: '#888', 
+                      marginTop: 'auto',
+                      borderTop: '1px solid #eee',
+                      paddingTop: '2px',
+                    }}>
+                      DaanaRX • For Clinic Use Only
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </Center>
+            
+            <Group justify="center">
+              <Button leftSection={<IconPrinter size={16} />} onClick={() => handlePrint()}>
+                Print Label
+              </Button>
               <Button variant="light" onClick={handleReset}>
                 Add Another Unit
               </Button>

@@ -2,6 +2,20 @@ import { Request, Response, NextFunction } from 'express';
 import { verifyToken, extractToken } from '../utils/auth';
 import { getUserById, getClinicById } from '../services/authService';
 import { GraphQLContext } from '../types/index';
+import { supabaseServer } from '../utils/supabase';
+
+// Helper to verify user has access to a clinic
+async function verifyUserClinicAccess(userId: string, clinicId: string): Promise<boolean> {
+  const { data, error } = await supabaseServer.rpc('get_user_clinics', {
+    p_user_id: userId,
+  });
+
+  if (error || !data) {
+    return false;
+  }
+
+  return data.some((clinic: any) => clinic.clinic_id === clinicId);
+}
 
 export async function authMiddleware(
   req: Request,
@@ -10,16 +24,33 @@ export async function authMiddleware(
 ): Promise<void> {
   try {
     const token = extractToken(req.headers.authorization);
+    const requestedClinicId = req.headers['x-clinic-id'] as string | undefined;
 
     if (token) {
       const payload = verifyToken(token);
       const user = await getUserById(payload.userId);
-      const clinic = user ? await getClinicById(user.clinicId) : null;
+      
+      if (user) {
+        let clinic = null;
+        
+        // If a specific clinic is requested, verify access and use it
+        if (requestedClinicId) {
+          const hasAccess = await verifyUserClinicAccess(user.userId, requestedClinicId);
+          if (hasAccess) {
+            clinic = await getClinicById(requestedClinicId);
+          }
+        }
+        
+        // Fall back to user's primary clinic if no valid requested clinic
+        if (!clinic) {
+          clinic = await getClinicById(user.clinicId);
+        }
 
-      if (user && clinic) {
-        (req as any).user = user;
-        (req as any).clinic = clinic;
-        (req as any).token = token;
+        if (clinic) {
+          (req as any).user = user;
+          (req as any).clinic = clinic;
+          (req as any).token = token;
+        }
       }
     }
 
@@ -41,15 +72,32 @@ export function createGraphQLContext({ req }: { req: any }): GraphQLContext {
 export async function createGraphQLContextFromNextRequest(req: any): Promise<GraphQLContext> {
   try {
     const authHeader = req.headers.get('authorization');
+    const requestedClinicId = req.headers.get('x-clinic-id');
     const token = extractToken(authHeader);
 
     if (token) {
       const payload = verifyToken(token);
       const user = await getUserById(payload.userId);
-      const clinic = user ? await getClinicById(user.clinicId) : null;
+      
+      if (user) {
+        let clinic = null;
+        
+        // If a specific clinic is requested, verify access and use it
+        if (requestedClinicId) {
+          const hasAccess = await verifyUserClinicAccess(user.userId, requestedClinicId);
+          if (hasAccess) {
+            clinic = await getClinicById(requestedClinicId);
+          }
+        }
+        
+        // Fall back to user's primary clinic if no valid requested clinic
+        if (!clinic) {
+          clinic = await getClinicById(user.clinicId);
+        }
 
-      if (user && clinic) {
-        return { user, clinic, token };
+        if (clinic) {
+          return { user, clinic, token };
+        }
       }
     }
   } catch (error) {

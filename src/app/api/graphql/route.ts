@@ -14,7 +14,6 @@ const server = new ApolloServer({
       code: error.extensions?.code,
       path: error.path,
       originalError: originalError?.message,
-      stack: error.stack,
     });
     return {
       message: error.message,

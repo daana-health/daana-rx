@@ -8,6 +8,8 @@ import { useDisclosure } from '@mantine/hooks';
 import { RootState } from '../../store';
 import { restoreAuth, logout } from '../../store/authSlice';
 import { useAuth } from '../../hooks/useAuth';
+import { ClinicSwitcher } from '../ClinicSwitcher';
+import { AppInitializer } from '../AppInitializer';
 import {
   IconHome,
   IconPackageImport,
@@ -28,7 +30,7 @@ export function AppShell({ children }: AppShellProps) {
   const [opened, { toggle }] = useDisclosure();
   const router = useRouter();
   const dispatch = useDispatch();
-  const { user, clinic } = useSelector((state: RootState) => state.auth);
+  const { user } = useSelector((state: RootState) => state.auth);
   const { isAuthenticated, hasHydrated } = useAuth();
 
   useEffect(() => {
@@ -71,52 +73,55 @@ export function AppShell({ children }: AppShellProps) {
     navItems.push({ icon: IconLocation, label: 'Admin', href: '/admin' });
   }
 
-  // Add Settings for superadmin only
-  if (user?.userRole === 'superadmin') {
+  // Add Settings for admin and superadmin
+  if (user?.userRole === 'admin' || user?.userRole === 'superadmin') {
     navItems.push({ icon: IconSettings, label: 'Settings', href: '/settings' });
   }
 
   return (
-    <MantineAppShell
-      header={{ height: 60 }}
-      navbar={{ width: 250, breakpoint: 'sm', collapsed: { mobile: !opened } }}
-      padding="md"
-    >
-      <MantineAppShell.Header>
-        <Group h="100%" px="md" justify="space-between">
-          <Group>
-            <Burger opened={opened} onClick={toggle} hiddenFrom="sm" size="sm" />
-            <Text size="xl" fw={700}>
-              DaanaRX
-            </Text>
+    <AppInitializer>
+      <MantineAppShell
+        header={{ height: 60 }}
+        navbar={{ width: 250, breakpoint: 'sm', collapsed: { mobile: !opened } }}
+        padding="md"
+      >
+        <MantineAppShell.Header>
+          <Group h="100%" px="md" justify="space-between">
+            <Group>
+              <Burger opened={opened} onClick={toggle} hiddenFrom="sm" size="sm" />
+              <Text size="xl" fw={700}>
+                DaanaRX
+              </Text>
+              <ClinicSwitcher />
+            </Group>
+            <Group>
+              <Text size="sm" c="dimmed">
+                {user?.username} ({user?.userRole})
+              </Text>
+              <Button
+                variant="subtle"
+                leftSection={<IconLogout size={16} />}
+                onClick={handleLogout}
+              >
+                Logout
+              </Button>
+            </Group>
           </Group>
-          <Group>
-            <Text size="sm" c="dimmed">
-              {user?.username} ({user?.userRole})
-            </Text>
-            <Button
-              variant="subtle"
-              leftSection={<IconLogout size={16} />}
-              onClick={handleLogout}
-            >
-              Logout
-            </Button>
-          </Group>
-        </Group>
-      </MantineAppShell.Header>
+        </MantineAppShell.Header>
 
-      <MantineAppShell.Navbar p="md">
-        {navItems.map((item) => (
-          <NavLink
-            key={item.href}
-            label={item.label}
-            leftSection={<item.icon size={20} />}
-            onClick={() => handleNavigation(item.href)}
-          />
-        ))}
-      </MantineAppShell.Navbar>
+        <MantineAppShell.Navbar p="md">
+          {navItems.map((item) => (
+            <NavLink
+              key={item.href}
+              label={item.label}
+              leftSection={<item.icon size={20} />}
+              onClick={() => handleNavigation(item.href)}
+            />
+          ))}
+        </MantineAppShell.Navbar>
 
-      <MantineAppShell.Main>{children}</MantineAppShell.Main>
-    </MantineAppShell>
+        <MantineAppShell.Main>{children}</MantineAppShell.Main>
+      </MantineAppShell>
+    </AppInitializer>
   );
 }

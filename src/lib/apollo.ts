@@ -7,13 +7,29 @@ const httpLink = createHttpLink({
 });
 
 const authLink = setContext((_, { headers }) => {
-  // Get token from localStorage
-  const token = typeof window !== 'undefined' ? localStorage.getItem('authToken') : null;
+  if (typeof window === 'undefined') {
+    return { headers };
+  }
+
+  // Get token and active clinic from localStorage
+  const token = localStorage.getItem('authToken');
+  const clinicStr = localStorage.getItem('clinic');
+  let activeClinicId: string | null = null;
+
+  if (clinicStr) {
+    try {
+      const clinic = JSON.parse(clinicStr);
+      activeClinicId = clinic.clinicId;
+    } catch {
+      // Ignore parse errors
+    }
+  }
 
   return {
     headers: {
       ...headers,
       authorization: token ? `Bearer ${token}` : '',
+      ...(activeClinicId && { 'x-clinic-id': activeClinicId }),
     },
   };
 });

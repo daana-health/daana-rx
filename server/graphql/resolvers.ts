@@ -37,6 +37,10 @@ export const resolvers = {
       return user;
     },
 
+    checkEmailExists: async (_: unknown, { email }: { email: string }) => {
+      return authService.checkEmailExists(email);
+    },
+
     // Dashboard
     getDashboardStats: async (_: unknown, __: unknown, context: GraphQLContext) => {
       const { clinic } = requireAuth(context);
@@ -162,6 +166,31 @@ export const resolvers = {
       const { clinic } = requireAuth(context);
       return clinic;
     },
+
+    getUserClinics: async (_: unknown, __: unknown, context: GraphQLContext) => {
+      const { user } = requireAuth(context);
+
+      // Use the SQL function to get all clinics for the user
+      const { data: clinics, error } = await supabaseServer.rpc('get_user_clinics', {
+        p_user_id: user.userId,
+      });
+
+      if (error) {
+        console.error('Error fetching user clinics:', error);
+        throw new GraphQLError('Failed to fetch user clinics');
+      }
+
+      // Transform the response to match the Clinic type
+      return (clinics || []).map((clinic: any) => ({
+        clinicId: clinic.clinic_id,
+        name: clinic.clinic_name,
+        primaryColor: clinic.primary_color,
+        secondaryColor: clinic.secondary_color,
+        logoUrl: clinic.logo_url,
+        createdAt: clinic.created_at ? new Date(clinic.created_at) : new Date(),
+        updatedAt: clinic.updated_at ? new Date(clinic.updated_at) : new Date(),
+      }));
+    },
   },
 
   Mutation: {
@@ -203,13 +232,13 @@ export const resolvers = {
       return authService.inviteUser(input.email, input.username, input.userRole, clinic.clinicId);
     },
 
-    // Invitations
+    // Invitations (only superadmins can invite users to support multi-clinic access)
     sendInvitation: async (
       _: unknown,
       { input }: { input: { email: string; userRole: string } },
       context: GraphQLContext
     ) => {
-      requireRole(context, ['superadmin', 'admin']);
+      requireRole(context, ['superadmin']);
       const { user, clinic } = requireAuth(context);
       return invitationService.sendInvitation({
         email: input.email,
@@ -239,7 +268,7 @@ export const resolvers = {
       { invitationId }: { invitationId: string },
       context: GraphQLContext
     ) => {
-      requireRole(context, ['superadmin', 'admin']);
+      requireRole(context, ['superadmin']);
       const { clinic } = requireAuth(context);
       return invitationService.resendInvitation(invitationId, clinic.clinicId);
     },
@@ -249,7 +278,7 @@ export const resolvers = {
       { invitationId }: { invitationId: string },
       context: GraphQLContext
     ) => {
-      requireRole(context, ['superadmin', 'admin']);
+      requireRole(context, ['superadmin']);
       const { clinic } = requireAuth(context);
       return invitationService.cancelInvitation(invitationId, clinic.clinicId);
     },
@@ -353,6 +382,15 @@ export const resolvers = {
         createdAt: new Date(updatedClinic.created_at),
         updatedAt: new Date(updatedClinic.updated_at),
       };
+    },
+
+    createClinic: async (
+      _: unknown,
+      { input }: { input: { name: string; password: string } },
+      context: GraphQLContext
+    ) => {
+      const { user } = requireAuth(context);
+      return authService.createClinic(user.userId, input.name, input.password);
     },
   },
 };

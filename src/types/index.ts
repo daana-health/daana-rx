@@ -12,11 +12,13 @@ export interface User {
   userId: string;
   username: string;
   password: string;
-  clinicId: string;
+  clinicId: string; // Primary clinic (for backward compatibility)
+  activeClinicId?: string; // Currently active clinic
   userRole: UserRole;
   email?: string;
   createdAt: Date;
   updatedAt: Date;
+  clinics?: Clinic[]; // All clinics this user belongs to
 }
 
 export interface Clinic {
@@ -27,6 +29,8 @@ export interface Clinic {
   logoUrl?: string;
   createdAt: Date;
   updatedAt: Date;
+  userRole?: UserRole; // User's role in this clinic (only populated when fetching user's clinics)
+  joinedAt?: Date; // When user joined this clinic (only populated when fetching user's clinics)
 }
 
 export interface Invitation {

@@ -1,4 +1,5 @@
 import { supabaseServer, supabaseAuth } from '../utils/supabase';
+import { generateToken } from '../utils/auth';
 import type { Invitation } from '@/types';
 
 export interface SendInvitationInput {
@@ -25,16 +26,19 @@ export const invitationService = {
       throw new Error('Invalid user role. Must be admin or employee.');
     }
 
-    // Check if user already exists with this email in this clinic
+    // Check if user already exists with this email
     const { data: existingUser } = await supabaseServer
       .from('users')
-      .select('user_id, email')
+      .select('user_id, email, clinic_ids')
       .eq('email', email)
-      .eq('clinic_id', clinicId)
       .single();
 
+    // If user exists, check if they're already in this clinic
     if (existingUser) {
-      throw new Error('User with this email already exists in this clinic.');
+      const clinicIds = existingUser.clinic_ids || [];
+      if (clinicIds.includes(clinicId)) {
+        throw new Error('User with this email already exists in this clinic.');
+      }
     }
 
     // Check if there's already an active invitation
@@ -93,9 +97,9 @@ export const invitationService = {
   },
 
   /**
-   * Send invitation email via Supabase Auth
-   * NOTE: Email sending is disabled for now. The invitation link must be shared manually.
-   * The invitation URL will be returned to the admin to share with the invitee.
+   * Send invitation email
+   * NOTE: We can't use Supabase's inviteUserByEmail because it creates an auth user immediately.
+   * For now, just log the invitation URL. You can integrate with an email service later.
    */
   async sendInvitationEmail(email: string, invitationToken: string, clinicId: string): Promise<void> {
     // Get clinic name for email branding
@@ -111,16 +115,32 @@ export const invitationService = {
     const inviteUrl = `${process.env.NEXT_PUBLIC_APP_URL}/auth/signup?invitation=${invitationToken}`;
 
     // Log the invitation URL for the admin to share
-    console.log('📧 Invitation created for:', email);
-    console.log('🔗 Share this link:', inviteUrl);
-    console.log('🏥 Clinic:', clinicName);
+    console.log('\n=================================');
+    console.log('📧 New Invitation Created');
+    console.log('=================================');
+    console.log('To:', email);
+    console.log('Clinic:', clinicName);
+    console.log('Invitation Link:', inviteUrl);
+    console.log('=================================\n');
 
-    // TODO: Integrate with a proper email service (SendGrid, Resend, etc.)
-    // For now, the admin must manually share the invitation URL
-    
-    // NOTE: DO NOT use Supabase's inviteUserByEmail - it creates an auth user immediately
-    // and sends them to a password reset flow, which is wrong for our invitation system.
-    // We want to create the auth user ONLY when they accept the invitation.
+    // TODO: Integrate with an email service like Resend, SendGrid, or configure Supabase Functions
+    // to send emails without creating auth users.
+    //
+    // Options:
+    // 1. Use Resend.com (easiest):
+    //    const resend = new Resend(process.env.RESEND_API_KEY);
+    //    await resend.emails.send({
+    //      from: 'noreply@yourdomain.com',
+    //      to: email,
+    //      subject: `You've been invited to ${clinicName}`,
+    //      html: `<p>Click here to accept: <a href="${inviteUrl}">${inviteUrl}</a></p>`
+    //    });
+    //
+    // 2. Use SendGrid
+    // 3. Use AWS SES
+    // 4. Use Supabase Edge Functions with a custom email API
+    //
+    // For now, the admin must manually share this link with the user.
   },
 
   /**
@@ -176,7 +196,7 @@ export const invitationService = {
   },
 
   /**
-   * Accept an invitation and create a user account
+   * Accept an invitation and create a user account or add existing user to clinic
    */
   async acceptInvitation(input: AcceptInvitationInput): Promise<{ user: any; token: string; clinic: any }> {
     const { invitationToken, password } = input;
@@ -192,34 +212,92 @@ export const invitationService = {
       throw new Error('This invitation has already been used or expired.');
     }
 
-    // Create the user in Supabase Auth
-    const { data: authData, error: authError } = await supabaseServer.auth.admin.createUser({
-      email: invitation.email,
-      password,
-      email_confirm: true,
-    });
-
-    if (authError) {
-      throw new Error(`Failed to create user: ${authError.message}`);
-    }
-
-    // Create the user record in the database
-    const { data: user, error: userError } = await supabaseServer
+    // Check if user already exists with this email
+    const { data: existingUser } = await supabaseServer
       .from('users')
-      .insert({
-        user_id: authData.user.id,
-        email: invitation.email,
-        username: invitation.email.split('@')[0],
-        clinic_id: invitation.clinicId,
-        user_role: invitation.userRole,
-      })
       .select('*')
+      .eq('email', invitation.email)
       .single();
 
-    if (userError) {
-      // Rollback: delete the auth user
-      await supabaseServer.auth.admin.deleteUser(authData.user.id);
-      throw new Error(`Failed to create user record: ${userError.message}`);
+    let user: any;
+
+    if (existingUser) {
+      // User already exists - just add them to the new clinic
+      // They need to sign in with their existing password to verify identity
+      const { error: signInError } = await supabaseAuth.auth.signInWithPassword({
+        email: invitation.email,
+        password,
+      });
+
+      if (signInError) {
+        throw new Error('Invalid password. Please use your existing account password.');
+      }
+
+      user = existingUser;
+
+      // Add user to the new clinic using the helper function
+      const { error: addClinicError } = await supabaseServer.rpc('add_user_to_clinic', {
+        p_user_id: existingUser.user_id,
+        p_clinic_id: invitation.clinicId,
+      });
+
+      if (addClinicError) {
+        throw new Error(`Failed to add user to clinic: ${addClinicError.message}`);
+      }
+    } else {
+      // New user - create auth account and user record
+      const { data: newAuthData, error: authError } = await supabaseServer.auth.admin.createUser({
+        email: invitation.email,
+        password,
+        email_confirm: true,
+      });
+
+      if (authError) {
+        throw new Error(`Failed to create user: ${authError.message}`);
+      }
+
+      // Create the user record in the database
+      const { data: newUser, error: userError } = await supabaseServer
+        .from('users')
+        .insert({
+          user_id: newAuthData.user.id,
+          email: invitation.email,
+          username: invitation.email.split('@')[0],
+          clinic_id: invitation.clinicId,
+          active_clinic_id: invitation.clinicId,
+          clinic_ids: [invitation.clinicId],
+          user_role: invitation.userRole,
+        })
+        .select('*')
+        .single();
+
+      if (userError) {
+        // Rollback: delete the auth user
+        await supabaseServer.auth.admin.deleteUser(newAuthData.user.id);
+        throw new Error(`Failed to create user record: ${userError.message}`);
+      }
+
+      user = newUser;
+
+      // Add to clinic arrays using helper function
+      const { error: addClinicError } = await supabaseServer.rpc('add_user_to_clinic', {
+        p_user_id: newAuthData.user.id,
+        p_clinic_id: invitation.clinicId,
+      });
+
+      if (addClinicError) {
+        throw new Error(`Failed to add user to clinic: ${addClinicError.message}`);
+      }
+
+      // Sign in the new user to establish the session (we'll generate our own JWT)
+      const { error: signInError } = await supabaseAuth.auth.signInWithPassword({
+        email: invitation.email,
+        password,
+      });
+
+      if (signInError) {
+        throw new Error(`Failed to sign in: ${signInError.message}`);
+      }
     }
 
     // Mark invitation as accepted
@@ -242,27 +320,36 @@ export const invitationService = {
       throw new Error(`Failed to fetch clinic: ${clinicError.message}`);
     }
 
-    // Sign in the user to get a token using anon key client
-    const { data: signInData, error: signInError } = await supabaseAuth.auth.signInWithPassword({
-      email: invitation.email,
-      password,
-    });
+    // Fetch the updated user record to get the correct active_clinic_id
+    const { data: updatedUser, error: updatedUserError } = await supabaseServer
+      .from('users')
+      .select('*')
+      .eq('user_id', user.user_id)
+      .single();
 
-    if (signInError) {
-      throw new Error(`Failed to sign in: ${signInError.message}`);
+    if (updatedUserError || !updatedUser) {
+      throw new Error(`Failed to fetch updated user: ${updatedUserError?.message}`);
     }
+
+    // Generate JWT token with the correct clinic information
+    const token = generateToken({
+      userId: updatedUser.user_id,
+      clinicId: invitation.clinicId, // Use the invited clinic as the active clinic
+      userRole: invitation.userRole,
+    });
 
     return {
       user: {
-        userId: user.user_id,
-        username: user.username,
-        email: user.email,
-        clinicId: user.clinic_id,
-        userRole: user.user_role,
-        createdAt: new Date(user.created_at),
-        updatedAt: new Date(user.updated_at),
+        userId: updatedUser.user_id,
+        username: updatedUser.username,
+        email: updatedUser.email,
+        clinicId: invitation.clinicId, // Use the new clinic as the primary clinic
+        activeClinicId: invitation.clinicId, // Set the new clinic as active
+        userRole: invitation.userRole, // Use the role from the invitation
+        createdAt: new Date(updatedUser.created_at),
+        updatedAt: new Date(updatedUser.updated_at),
       },
-      token: signInData.session.access_token,
+      token,
       clinic: {
         clinicId: clinic.clinic_id,
         name: clinic.name,

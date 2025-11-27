@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import { Modal, Button, Group, Text, Stack, Alert, TextInput } from '@mantine/core';
 import { IconQrcode, IconAlertCircle, IconKeyboard } from '@tabler/icons-react';
 import { Html5Qrcode } from 'html5-qrcode';
@@ -25,29 +25,100 @@ export function QRScanner({
   const [error, setError] = useState<string>('');
   const [showManualInput, setShowManualInput] = useState(false);
   const [manualCode, setManualCode] = useState('');
+  const mountedRef = useRef(true);
 
+  // Cleanup function to stop all camera streams
+  const stopAllCameraStreams = useCallback(async () => {
+    try {
+      // Stop the Html5Qrcode scanner if it exists
+      if (scannerRef.current) {
+        try {
+          const state = scannerRef.current.getState();
+          if (state === 2) { // Html5QrcodeScannerState.SCANNING
+            await scannerRef.current.stop();
+          }
+        } catch (err) {
+          // Scanner might already be stopped
+          console.log('Scanner already stopped or not started');
+        }
+        try {
+          await scannerRef.current.clear();
+        } catch (err) {
+          // Ignore clear errors
+        }
+        scannerRef.current = null;
+      }
+
+      // Additionally, stop any lingering media streams
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      const videoDevices = devices.filter(device => device.kind === 'videoinput');
+      
+      if (videoDevices.length > 0) {
+        // Get all video elements and stop their streams
+        const videoElements = document.querySelectorAll('video');
+        videoElements.forEach(video => {
+          if (video.srcObject) {
+            const stream = video.srcObject as MediaStream;
+            stream.getTracks().forEach(track => {
+              track.stop();
+            });
+            video.srcObject = null;
+          }
+        });
+      }
+
+      if (mountedRef.current) {
+        setIsScanning(false);
+      }
+    } catch (err) {
+      console.error('Error stopping camera streams:', err);
+    }
+  }, []);
+
+  // Effect to handle modal open/close
   useEffect(() => {
+    mountedRef.current = true;
+
     if (!opened) {
-      stopScanner();
+      // Modal is closing, stop everything
+      stopAllCameraStreams();
+      if (mountedRef.current) {
+        setShowManualInput(false);
+        setManualCode('');
+        setError('');
+      }
       return;
     }
 
-    startScanner();
+    // Modal is opening, start scanner after a short delay to ensure DOM is ready
+    const startTimer = setTimeout(() => {
+      if (mountedRef.current && opened) {
+        startScanner();
+      }
+    }, 100);
 
     return () => {
-      stopScanner();
+      clearTimeout(startTimer);
+      mountedRef.current = false;
+      stopAllCameraStreams();
     };
-  }, [opened]);
+  }, [opened, stopAllCameraStreams]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      mountedRef.current = false;
+      stopAllCameraStreams();
+    };
+  }, [stopAllCameraStreams]);
 
   const requestCameraPermission = async (): Promise<boolean> => {
     try {
-      // Check if navigator.mediaDevices is supported
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
         setError('Camera is not supported on this browser. Please use manual entry.');
         return false;
       }
 
-      // Request camera permission explicitly
       const stream = await navigator.mediaDevices.getUserMedia({ 
         video: { facingMode: 'environment' } 
       });
@@ -72,17 +143,21 @@ export function QRScanner({
   };
 
   const startScanner = async () => {
+    if (!mountedRef.current) return;
+
     try {
       setIsScanning(true);
       setError('');
 
-      // Request camera permission first
       const hasPermission = await requestCameraPermission();
-      if (!hasPermission) {
+      if (!hasPermission || !mountedRef.current) {
         setIsScanning(false);
         setShowManualInput(true);
         return;
       }
+
+      // Make sure any previous instance is cleaned up
+      await stopAllCameraStreams();
 
       const html5QrCode = new Html5Qrcode('qr-reader');
       scannerRef.current = html5QrCode;
@@ -94,7 +169,9 @@ export function QRScanner({
           qrbox: { width: 250, height: 250 },
         },
         (decodedText) => {
-          handleScan(decodedText);
+          if (mountedRef.current) {
+            handleScan(decodedText);
+          }
         },
         () => {
           // Ignore decode errors (continuous scanning)
@@ -102,49 +179,51 @@ export function QRScanner({
       );
     } catch (err: any) {
       console.error('Error starting QR scanner:', err);
-      setError(
-        'Failed to start camera. Please check permissions or use manual entry.'
-      );
-      setIsScanning(false);
-      setShowManualInput(true);
-    }
-  };
-
-  const stopScanner = async () => {
-    if (scannerRef.current && isScanning) {
-      try {
-        await scannerRef.current.stop();
-        scannerRef.current = null;
+      if (mountedRef.current) {
+        setError('Failed to start camera. Please check permissions or use manual entry.');
         setIsScanning(false);
-      } catch (err) {
-        console.error('Error stopping scanner:', err);
+        setShowManualInput(true);
       }
     }
   };
 
-  const handleScan = (code: string) => {
-    stopScanner();
+  const handleScan = async (code: string) => {
+    await stopAllCameraStreams();
     onScan(code);
   };
 
-  const handleManualSubmit = () => {
+  const handleManualSubmit = async () => {
     if (manualCode.trim()) {
-      stopScanner();
+      await stopAllCameraStreams();
       onScan(manualCode.trim());
       setManualCode('');
     }
   };
 
+  const handleClose = async () => {
+    await stopAllCameraStreams();
+    onClose();
+  };
+
+  const handleSwitchToManual = async () => {
+    await stopAllCameraStreams();
+    setShowManualInput(true);
+  };
+
+  const handleSwitchToScanner = () => {
+    setShowManualInput(false);
+    setManualCode('');
+    startScanner();
+  };
+
   return (
     <Modal
       opened={opened}
-      onClose={() => {
-        stopScanner();
-        onClose();
-      }}
+      onClose={handleClose}
       title={title}
       size="lg"
       centered
+      closeOnClickOutside={false}
     >
       <Stack>
         <Text size="sm" c="dimmed">
@@ -165,6 +244,7 @@ export function QRScanner({
                 width: '100%',
                 borderRadius: '8px',
                 overflow: 'hidden',
+                minHeight: '300px',
               }}
             />
 
@@ -172,19 +252,11 @@ export function QRScanner({
               <Button
                 variant="subtle"
                 leftSection={<IconKeyboard size={16} />}
-                onClick={() => {
-                  stopScanner();
-                  setShowManualInput(true);
-                }}
+                onClick={handleSwitchToManual}
               >
                 Manual Entry
               </Button>
-              <Button
-                onClick={() => {
-                  stopScanner();
-                  onClose();
-                }}
-              >
+              <Button onClick={handleClose}>
                 Cancel
               </Button>
             </Group>
@@ -208,11 +280,7 @@ export function QRScanner({
               <Button
                 variant="subtle"
                 leftSection={<IconQrcode size={16} />}
-                onClick={() => {
-                  setShowManualInput(false);
-                  setManualCode('');
-                  startScanner();
-                }}
+                onClick={handleSwitchToScanner}
               >
                 Back to Scanner
               </Button>
@@ -220,12 +288,7 @@ export function QRScanner({
                 <Button variant="light" onClick={handleManualSubmit}>
                   Submit
                 </Button>
-                <Button
-                  onClick={() => {
-                    stopScanner();
-                    onClose();
-                  }}
-                >
+                <Button onClick={handleClose}>
                   Cancel
                 </Button>
               </Group>
@@ -236,4 +299,3 @@ export function QRScanner({
     </Modal>
   );
 }
-

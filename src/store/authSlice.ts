@@ -6,6 +6,7 @@ const TWO_HOURS_IN_MS = 2 * 60 * 60 * 1000;
 interface AuthState {
   user: User | null;
   clinic: Clinic | null;
+  clinics: Clinic[]; // All clinics the user belongs to
   token: string | null;
   expiresAt: number | null;
   isAuthenticated: boolean;
@@ -16,6 +17,7 @@ interface AuthState {
 const initialState: AuthState = {
   user: null,
   clinic: null,
+  clinics: [],
   token: null,
   expiresAt: null,
   isAuthenticated: false,
@@ -27,12 +29,13 @@ const authSlice = createSlice({
   name: 'auth',
   initialState,
   reducers: {
-    setAuth: (state, action: PayloadAction<{ user: User; clinic: Clinic; token: string }>) => {
+    setAuth: (state, action: PayloadAction<{ user: User; clinic: Clinic; token: string; clinics?: Clinic[] }>) => {
       const now = Date.now();
       const expiresAt = now + TWO_HOURS_IN_MS;
 
       state.user = action.payload.user;
       state.clinic = action.payload.clinic;
+      state.clinics = action.payload.clinics || [action.payload.clinic];
       state.token = action.payload.token;
       state.expiresAt = expiresAt;
       state.lastActivity = now;
@@ -44,8 +47,23 @@ const authSlice = createSlice({
         localStorage.setItem('authToken', action.payload.token);
         localStorage.setItem('user', JSON.stringify(action.payload.user));
         localStorage.setItem('clinic', JSON.stringify(action.payload.clinic));
+        localStorage.setItem('clinics', JSON.stringify(state.clinics));
         localStorage.setItem('authExpiresAt', expiresAt.toString());
         localStorage.setItem('lastActivity', now.toString());
+      }
+    },
+    switchClinic: (state, action: PayloadAction<Clinic>) => {
+      state.clinic = action.payload;
+      if (state.user) {
+        state.user.activeClinicId = action.payload.clinicId;
+      }
+
+      // Update localStorage
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('clinic', JSON.stringify(action.payload));
+        if (state.user) {
+          localStorage.setItem('user', JSON.stringify(state.user));
+        }
       }
     },
     refreshActivity: (state) => {
@@ -58,6 +76,7 @@ const authSlice = createSlice({
     logout: (state) => {
       state.user = null;
       state.clinic = null;
+      state.clinics = [];
       state.token = null;
       state.expiresAt = null;
       state.lastActivity = null;
@@ -69,6 +88,7 @@ const authSlice = createSlice({
         localStorage.removeItem('authToken');
         localStorage.removeItem('user');
         localStorage.removeItem('clinic');
+        localStorage.removeItem('clinics');
         localStorage.removeItem('authExpiresAt');
         localStorage.removeItem('lastActivity');
       }
@@ -78,6 +98,7 @@ const authSlice = createSlice({
         const token = localStorage.getItem('authToken');
         const userStr = localStorage.getItem('user');
         const clinicStr = localStorage.getItem('clinic');
+        const clinicsStr = localStorage.getItem('clinics');
         const expiresAtStr = localStorage.getItem('authExpiresAt');
         const lastActivityStr = localStorage.getItem('lastActivity');
         const expiresAt = expiresAtStr ? Number.parseInt(expiresAtStr, 10) : null;
@@ -95,6 +116,7 @@ const authSlice = createSlice({
           state.token = token!;
           state.user = JSON.parse(userStr!);
           state.clinic = JSON.parse(clinicStr!);
+          state.clinics = clinicsStr ? JSON.parse(clinicsStr) : [JSON.parse(clinicStr!)];
           state.expiresAt = expiresAt!;
           state.lastActivity = lastActivity;
           state.isAuthenticated = true;
@@ -103,12 +125,14 @@ const authSlice = createSlice({
             localStorage.removeItem('authToken');
             localStorage.removeItem('user');
             localStorage.removeItem('clinic');
+            localStorage.removeItem('clinics');
             localStorage.removeItem('authExpiresAt');
             localStorage.removeItem('lastActivity');
           }
 
           state.user = null;
           state.clinic = null;
+          state.clinics = [];
           state.token = null;
           state.expiresAt = null;
           state.lastActivity = null;
@@ -121,6 +145,6 @@ const authSlice = createSlice({
   },
 });
 
-export const { setAuth, logout, restoreAuth, refreshActivity } = authSlice.actions;
+export const { setAuth, logout, restoreAuth, refreshActivity, switchClinic } = authSlice.actions;
 export default authSlice.reducer;
 export type { RootState } from './index';

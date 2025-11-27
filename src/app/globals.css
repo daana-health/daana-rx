@@ -39,3 +39,24 @@
   opacity: 0.5;
 }
 
+/* Print styles for medication labels */
+@media print {
+  @page {
+    size: 4in 2in;
+    margin: 0;
+  }
+  
+  .print-label {
+    width: 384px !important;
+    height: 192px !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+  
+  .print-label > div {
+    width: 384px !important;
+    height: 192px !important;
+    box-sizing: border-box !important;
+  }
+}
+

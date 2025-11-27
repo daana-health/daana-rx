@@ -19,8 +19,17 @@ import {
 } from '@mantine/core';
 import { IconInfoCircle } from '@tabler/icons-react';
 import { notifications } from '@mantine/notifications';
-import { useMutation, useQuery, gql } from '@apollo/client';
+import { useMutation, useQuery, useLazyQuery, gql } from '@apollo/client';
 import { setAuth } from '../../../store/authSlice';
+
+const CHECK_EMAIL_EXISTS = gql`
+  query CheckEmailExists($email: String!) {
+    checkEmailExists(email: $email) {
+      exists
+      message
+    }
+  }
+`;
 
 const SIGN_UP_MUTATION = gql`
   mutation SignUp($input: SignUpInput!) {
@@ -255,6 +264,25 @@ function RegularSignUpForm() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [clinicName, setClinicName] = useState('');
+  const [emailExists, setEmailExists] = useState(false);
+
+  const [checkEmail] = useLazyQuery(CHECK_EMAIL_EXISTS, {
+    onCompleted: (data) => {
+      const exists = data?.checkEmailExists?.exists;
+      setEmailExists(exists);
+
+      if (exists) {
+        notifications.show({
+          title: 'Account exists',
+          message: 'An account with this email already exists. Please sign in instead.',
+          color: 'blue',
+        });
+      }
+    },
+    onError: (error) => {
+      console.error('Error checking email:', error);
+    },
+  });
 
   const [signUp, { loading }] = useMutation(SIGN_UP_MUTATION, {
     onCompleted: (data) => {
@@ -283,8 +311,20 @@ function RegularSignUpForm() {
     },
   });
 
+  const handleEmailBlur = () => {
+    if (!email || !email.includes('@')) return;
+    checkEmail({ variables: { email } });
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (emailExists) {
+      // Redirect to sign in
+      router.push('/auth/signin');
+      return;
+    }
+
     signUp({ variables: { input: { email, password, clinicName } } });
   };
 
@@ -314,7 +354,12 @@ function RegularSignUpForm() {
               required
               type="email"
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={(e) => {
+                setEmail(e.target.value);
+                setEmailExists(false);
+              }}
+              onBlur={handleEmailBlur}
+              error={emailExists ? 'This email is already registered. Please sign in instead.' : undefined}
             />
 
             <PasswordInput

@@ -18,6 +18,8 @@ export const typeDefs = `#graphql
     primaryColor: String
     secondaryColor: String
     logoUrl: String
+    userRole: UserRole
+    joinedAt: DateTime
     createdAt: DateTime!
     updatedAt: DateTime!
   }
@@ -102,8 +104,8 @@ export const typeDefs = `#graphql
     userId: ID!
     notes: String
     clinicId: ID!
-    unit: Unit!
-    user: User!
+    unit: Unit
+    user: User
   }
 
   type AuthPayload {
@@ -247,9 +249,20 @@ export const typeDefs = `#graphql
     userRole: UserRole!
   }
 
+  input CreateClinicInput {
+    name: String!
+    password: String!
+  }
+
+  type EmailCheckResult {
+    exists: Boolean!
+    message: String!
+  }
+
   type Query {
     # Auth
     me: User!
+    checkEmailExists(email: String!): EmailCheckResult!
 
     # Dashboard
     getDashboardStats: DashboardStats!
@@ -285,6 +298,7 @@ export const typeDefs = `#graphql
 
     # Clinic
     getClinic: Clinic!
+    getUserClinics: [Clinic!]!
   }
 
   type Mutation {
@@ -319,5 +333,6 @@ export const typeDefs = `#graphql
 
     # Clinic
     updateClinic(name: String, primaryColor: String, secondaryColor: String): Clinic!
+    createClinic(input: CreateClinicInput!): AuthPayload!
   }
 `;

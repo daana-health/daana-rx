@@ -358,3 +358,108 @@ export async function getUsersByClinicId(clinicId: string): Promise<User[]> {
     updatedAt: new Date(user.updated_at),
   }));
 }
+
+/**
+ * Check if an email exists in the database
+ */
+export async function checkEmailExists(email: string): Promise<{ exists: boolean; message: string }> {
+  const { data: user } = await supabaseServer
+    .from('users')
+    .select('email')
+    .eq('email', email.trim().toLowerCase())
+    .single();
+
+  if (user) {
+    return {
+      exists: true,
+      message: 'An account with this email already exists. Please sign in instead.',
+    };
+  }
+
+  return {
+    exists: false,
+    message: 'Email is available.',
+  };
+}
+
+/**
+ * Create a new clinic for an existing user
+ */
+export async function createClinic(userId: string, clinicName: string, password: string): Promise<AuthResponse> {
+  // Get the existing user
+  const { data: user, error: userError } = await supabaseServer
+    .from('users')
+    .select('*')
+    .eq('user_id', userId)
+    .single();
+
+  if (userError || !user) {
+    throw new Error('User not found');
+  }
+
+  // Verify the password
+  const { error: signInError } = await supabaseAuth.auth.signInWithPassword({
+    email: user.email,
+    password,
+  });
+
+  if (signInError) {
+    throw new Error('Invalid password');
+  }
+
+  // Create the new clinic
+  const { data: clinic, error: clinicError } = await supabaseServer
+    .from('clinics')
+    .insert({
+      name: clinicName,
+    })
+    .select()
+    .single();
+
+  if (clinicError || !clinic) {
+    throw new Error(`Failed to create clinic: ${clinicError?.message}`);
+  }
+
+  // Add user to the new clinic using the helper function
+  const { error: addClinicError } = await supabaseServer.rpc('add_user_to_clinic', {
+    p_user_id: userId,
+    p_clinic_id: clinic.clinic_id,
+  });
+
+  if (addClinicError) {
+    // Rollback: delete the clinic
+    await supabaseServer.from('clinics').delete().eq('clinic_id', clinic.clinic_id);
+    throw new Error(`Failed to add user to clinic: ${addClinicError.message}`);
+  }
+
+  // Generate JWT token with the new clinic
+  const token = generateToken({
+    userId: user.user_id,
+    clinicId: clinic.clinic_id,
+    userRole: 'superadmin', // User is superadmin of their new clinic
+  });
+
+  return {
+    token,
+    user: {
+      userId: user.user_id,
+      username: user.username,
+      password: '',
+      email: user.email,
+      clinicId: clinic.clinic_id,
+      activeClinicId: clinic.clinic_id,
+      userRole: 'superadmin',
+      createdAt: new Date(user.created_at),
+      updatedAt: new Date(user.updated_at),
+    },
+    clinic: {
+      clinicId: clinic.clinic_id,
+      name: clinic.name,
+      primaryColor: clinic.primary_color,
+      secondaryColor: clinic.secondary_color,
+      logoUrl: clinic.logo_url,
+      createdAt: new Date(clinic.created_at),
+      updatedAt: new Date(clinic.updated_at),
+    },
+  };
+}
