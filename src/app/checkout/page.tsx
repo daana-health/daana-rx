@@ -5,7 +5,6 @@ import { useSearchParams } from 'next/navigation';
 import { useLazyQuery, useMutation, useQuery, gql } from '@apollo/client';
 import { QrCodeIcon, AlertCircle, Loader2 } from 'lucide-react';
 import { AppShell } from '../../components/layout/AppShell';
-import { PageHeader } from '../../components/PageHeader';
 import { QRScanner } from '../../components/QRScanner';
 import { GetUnitResponse, SearchUnitsResponse, UnitData } from '../../types/graphql';
 import { Button } from '@/components/ui/button';

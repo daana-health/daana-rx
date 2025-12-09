@@ -8,7 +8,6 @@ import { QRCodeSVG } from 'qrcode.react';
 import { useReactToPrint } from 'react-to-print';
 import { QrCodeIcon, Printer, AlertCircle, Loader2 } from 'lucide-react';
 import { AppShell } from '../../components/layout/AppShell';
-import { PageHeader } from '../../components/PageHeader';
 import { BarcodeScanner } from '../../components/BarcodeScanner';
 import { LotCapacityAlert } from '../../components/LotCapacityAlert';
 import { LotCapacityStatus, useCapacityValidation } from '../../components/LotCapacityStatus';

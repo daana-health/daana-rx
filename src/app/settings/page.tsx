@@ -7,7 +7,6 @@ import { useQuery, useMutation, gql } from '@apollo/client';
 import { Mail, Trash2, Copy, Plus, Loader2 } from 'lucide-react';
 import { RootState } from '../../store';
 import { AppShell } from '../../components/layout/AppShell';
-import { PageHeader } from '../../components/PageHeader';
 import { GetUsersResponse, UserData } from '../../types/graphql';
 import { setAuth } from '../../store/authSlice';
 import { Button } from '@/components/ui/button';

@@ -15,7 +15,6 @@ import {
 import { QRCodeSVG } from 'qrcode.react';
 import { useReactToPrint } from 'react-to-print';
 import { AppShell } from '../../components/layout/AppShell';
-import { PageHeader } from '../../components/PageHeader';
 import { TransactionData, GetLocationsResponse, LocationData, DrugData } from '../../types/graphql';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';

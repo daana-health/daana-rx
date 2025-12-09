@@ -4,7 +4,6 @@ import { useState } from 'react';
 import { useQuery, gql } from '@apollo/client';
 import { Info, Loader2 } from 'lucide-react';
 import { AppShell } from '../../components/layout/AppShell';
-import { PageHeader } from '../../components/PageHeader';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
