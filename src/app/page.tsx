@@ -48,71 +48,72 @@ function QuickActionCard({ title, description, icon: Icon, color, href }: QuickA
 
   return (
     <Card
-      className="group cursor-pointer transition-all hover:shadow-lg hover:scale-[1.02] active:scale-[0.98]"
+      className="group cursor-pointer transition-all duration-200 hover:shadow-large hover:border-primary/20 active:scale-[0.98] animate-fade-in"
       onClick={() => router.push(href)}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => e.key === 'Enter' && router.push(href)}
     >
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <div className="flex items-center gap-3">
-          <div className={cn(
-            "rounded-lg p-2",
-            color === "blue" && "bg-blue-100 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400",
-            color === "green" && "bg-green-100 text-green-600 dark:bg-green-900/20 dark:text-green-400",
-            color === "violet" && "bg-violet-100 text-violet-600 dark:bg-violet-900/20 dark:text-violet-400",
-            color === "teal" && "bg-teal-100 text-teal-600 dark:bg-teal-900/20 dark:text-teal-400",
-            color === "indigo" && "bg-indigo-100 text-indigo-600 dark:bg-indigo-900/20 dark:text-indigo-400",
-          )}>
-            <Icon className="h-5 w-5" />
-          </div>
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
+        <div className={cn(
+          "rounded-xl p-3 transition-all duration-200 group-hover:scale-110",
+          color === "blue" && "bg-primary/10 text-primary",
+          color === "green" && "bg-success/10 text-success",
+          color === "violet" && "bg-violet-500/10 text-violet-600 dark:text-violet-400",
+          color === "teal" && "bg-primary/15 text-primary",
+          color === "indigo" && "bg-indigo-500/10 text-indigo-600 dark:text-indigo-400",
+        )}>
+          <Icon className="h-6 w-6" />
         </div>
-        <ArrowRight className="h-4 w-4 opacity-0 transition-opacity group-hover:opacity-100" />
+        <ArrowRight className="h-5 w-5 text-muted-foreground transition-all duration-200 group-hover:translate-x-1 group-hover:text-primary" />
       </CardHeader>
       <CardContent>
-        <CardTitle className="text-lg mb-1">{title}</CardTitle>
-        <CardDescription>{description}</CardDescription>
+        <CardTitle className="text-base sm:text-lg mb-2">{title}</CardTitle>
+        <CardDescription className="text-sm">{description}</CardDescription>
       </CardContent>
     </Card>
   );
 }
 
-function StatCard({ 
-  title, 
-  value, 
-  icon: Icon, 
+function StatCard({
+  title,
+  value,
+  icon: Icon,
   color,
   variant = 'default'
-}: { 
-  title: string; 
-  value: number; 
-  icon: React.ComponentType<{ className?: string }>; 
+}: {
+  title: string;
+  value: number;
+  icon: React.ComponentType<{ className?: string }>;
   color: string;
   variant?: 'default' | 'warning' | 'danger';
 }) {
   return (
-    <Card>
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle className="text-sm font-medium text-muted-foreground">
+    <Card className="animate-slide-in">
+      <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-3 gap-3">
+        <CardTitle className="text-xs sm:text-sm font-semibold uppercase tracking-wider text-muted-foreground flex-1 min-w-0">
           {title}
         </CardTitle>
         <div className={cn(
-          "rounded-lg p-2",
-          color === "blue" && "bg-blue-100 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400",
-          color === "orange" && "bg-orange-100 text-orange-600 dark:bg-orange-900/20 dark:text-orange-400",
-          color === "red" && "bg-red-100 text-red-600 dark:bg-red-900/20 dark:text-red-400",
-          color === "green" && "bg-green-100 text-green-600 dark:bg-green-900/20 dark:text-green-400",
-          color === "teal" && "bg-teal-100 text-teal-600 dark:bg-teal-900/20 dark:text-teal-400",
+          "rounded-xl shadow-soft flex items-center justify-center h-10 w-10 flex-shrink-0",
+          color === "blue" && "bg-primary/10 text-primary",
+          color === "orange" && "bg-warning/10 text-warning",
+          color === "red" && "bg-destructive/10 text-destructive",
+          color === "green" && "bg-success/10 text-success",
+          color === "teal" && "bg-primary/15 text-primary",
         )}>
-          <Icon className="h-4 w-4" />
+          <Icon className="h-5 w-5" />
         </div>
       </CardHeader>
-      <CardContent>
-        <div className="text-3xl font-bold">{value.toLocaleString()}</div>
+      <CardContent className="space-y-3">
+        <div className="text-2xl sm:text-3xl font-bold tracking-tight break-words">{value.toLocaleString()}</div>
         {variant === 'warning' && value > 0 && (
-          <Badge variant="outline" className="mt-2 border-orange-500 text-orange-600 dark:border-orange-400 dark:text-orange-400">
+          <Badge variant="outline" className="border-warning text-warning bg-warning/10 font-medium">
             Needs attention
           </Badge>
         )}
         {variant === 'danger' && value > 0 && (
-          <Badge variant="outline" className="mt-2 border-red-500 text-red-600 dark:border-red-400 dark:text-red-400">
+          <Badge variant="outline" className="border-destructive text-destructive bg-destructive/10 font-medium">
             Action required
           </Badge>
         )}
@@ -131,21 +132,21 @@ export default function HomePage() {
 
   return (
     <AppShell>
-      <div className="space-y-8">
+      <div className="space-y-8 sm:space-y-10">
         {/* Header */}
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
-          <p className="text-muted-foreground mt-2">
-            Overview of your clinic&apos;s inventory
+        <div className="space-y-2">
+          <h1 className="text-3xl sm:text-4xl font-bold tracking-tight">Dashboard</h1>
+          <p className="text-base sm:text-lg text-muted-foreground">
+            Overview of your clinic&apos;s medication inventory
           </p>
         </div>
 
         {/* Stats Grid */}
         {showLoading ? (
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
+          <div className="grid gap-4 sm:gap-5 md:gap-6 grid-cols-1 min-[500px]:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
             {[...Array(5)].map((_, i) => (
               <Card key={i}>
-                <CardHeader className="space-y-0 pb-2">
+                <CardHeader className="space-y-0 pb-3">
                   <Skeleton className="h-4 w-24" />
                 </CardHeader>
                 <CardContent>
@@ -155,22 +156,22 @@ export default function HomePage() {
             ))}
           </div>
         ) : error ? (
-          <Alert variant="destructive">
-            <AlertCircle className="h-4 w-4" />
-            <AlertDescription>
+          <Alert variant="destructive" className="animate-slide-in">
+            <AlertCircle className="h-5 w-5" />
+            <AlertDescription className="text-base">
               Error loading dashboard: {error.message}
             </AlertDescription>
           </Alert>
         ) : data ? (
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
+          <div className="grid gap-4 sm:gap-5 md:gap-6 grid-cols-1 min-[500px]:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
             <StatCard
-              title="Total Units"
+              title="Units"
               value={data.getDashboardStats.totalUnits}
               icon={Package}
               color="blue"
             />
             <StatCard
-              title="Expiring Soon"
+              title="Expiring"
               value={data.getDashboardStats.unitsExpiringSoon}
               icon={AlertTriangle}
               color="orange"
@@ -184,13 +185,13 @@ export default function HomePage() {
               variant="danger"
             />
             <StatCard
-              title="Recent Check-ins"
+              title="Check-Ins"
               value={data.getDashboardStats.recentCheckIns}
               icon={TrendingUp}
               color="green"
             />
             <StatCard
-              title="Recent Check-outs"
+              title="Check-Outs"
               value={data.getDashboardStats.recentCheckOuts}
               icon={TrendingDown}
               color="teal"
@@ -199,17 +200,15 @@ export default function HomePage() {
         ) : null}
 
         {/* Quick Actions */}
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-2xl font-bold tracking-tight">Quick Actions</h2>
-              <p className="text-muted-foreground">
-                Common tasks and workflows
-              </p>
-            </div>
+        <div className="space-y-5">
+          <div>
+            <h2 className="text-2xl sm:text-3xl font-bold tracking-tight">Quick Actions</h2>
+            <p className="text-sm sm:text-base text-muted-foreground mt-1">
+              Common tasks and workflows
+            </p>
           </div>
 
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-4 sm:gap-5 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
             <QuickActionCard
               title="Check In Medications"
               description="Add new medications to inventory"
@@ -250,44 +249,42 @@ export default function HomePage() {
 
         {/* Alerts Section */}
         {data && (data.getDashboardStats.unitsExpiringSoon > 0 || data.getDashboardStats.lowStockAlerts > 0) && (
-          <div className="space-y-4">
-            <h2 className="text-2xl font-bold tracking-tight">Alerts</h2>
-            <div className="grid gap-4 md:grid-cols-2">
+          <div className="space-y-5">
+            <h2 className="text-2xl sm:text-3xl font-bold tracking-tight">Alerts</h2>
+            <div className="grid gap-4 sm:gap-5 grid-cols-1 md:grid-cols-2">
               {data.getDashboardStats.unitsExpiringSoon > 0 && (
-                <Alert>
-                  <AlertTriangle className="h-4 w-4" />
+                <Alert className="border-warning/50 bg-warning/5 animate-fade-in">
+                  <AlertTriangle className="h-5 w-5 text-warning" />
                   <AlertDescription>
-                    <div className="font-medium">
+                    <div className="font-semibold text-base mb-3">
                       {data.getDashboardStats.unitsExpiringSoon} unit(s) expiring soon
                     </div>
-                    <div className="mt-2">
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        onClick={() => router.push('/inventory')}
-                      >
-                        View in Inventory
-                      </Button>
-                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => router.push('/inventory')}
+                      className="w-full sm:w-auto"
+                    >
+                      View in Inventory
+                    </Button>
                   </AlertDescription>
                 </Alert>
               )}
               {data.getDashboardStats.lowStockAlerts > 0 && (
-                <Alert variant="destructive">
-                  <AlertCircle className="h-4 w-4" />
+                <Alert variant="destructive" className="animate-fade-in">
+                  <AlertCircle className="h-5 w-5" />
                   <AlertDescription>
-                    <div className="font-medium">
+                    <div className="font-semibold text-base mb-3">
                       {data.getDashboardStats.lowStockAlerts} drug(s) with low stock
                     </div>
-                    <div className="mt-2">
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        onClick={() => router.push('/inventory')}
-                      >
-                        View in Inventory
-                      </Button>
-                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => router.push('/inventory')}
+                      className="w-full sm:w-auto"
+                    >
+                      View in Inventory
+                    </Button>
                   </AlertDescription>
                 </Alert>
               )}

@@ -420,17 +420,22 @@ export default function CheckInPage() {
 
   return (
     <AppShell>
-      <div className="space-y-6">
-        <PageHeader title="Check In" description="Add new medications to inventory" showBackButton={false} />
+      <div className="space-y-6 sm:space-y-8">
+        <div className="space-y-2">
+          <h1 className="text-3xl sm:text-4xl font-bold tracking-tight">Check In</h1>
+          <p className="text-base sm:text-lg text-muted-foreground">
+            Add new medications to inventory
+          </p>
+        </div>
 
         {!hasLocations && (
-          <Alert variant={isAdmin ? 'default' : 'destructive'}>
-            <AlertCircle className="h-4 w-4" />
-            <AlertDescription>
+          <Alert variant={isAdmin ? 'default' : 'destructive'} className="animate-slide-in">
+            <AlertCircle className="h-5 w-5" />
+            <AlertDescription className="text-base">
               {isAdmin ? (
-                <div className="flex items-center gap-2">
-                  You need to create at least one storage location before checking in medications.
-                  <Button variant="outline" size="sm" onClick={() => router.push('/admin')}>
+                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+                  <span>You need to create at least one storage location before checking in medications.</span>
+                  <Button variant="outline" size="sm" onClick={() => router.push('/admin')} className="w-full sm:w-auto">
                     Go to Admin
                   </Button>
                 </div>
@@ -443,12 +448,13 @@ export default function CheckInPage() {
 
         <Stepper activeStep={activeStep}>
           <Step label="Create Lot" description="Donation source">
-            <Card>
-              <CardContent className="pt-6 space-y-4">
-                <div className="flex gap-2">
+            <Card className="animate-fade-in">
+              <CardContent className="pt-6 space-y-5">
+                <div className="flex flex-col sm:flex-row gap-3">
                   <Button
                     variant={!useExistingLot ? 'default' : 'outline'}
                     onClick={() => setUseExistingLot(false)}
+                    size="lg"
                     className="flex-1"
                   >
                     Create New Lot
@@ -456,6 +462,7 @@ export default function CheckInPage() {
                   <Button
                     variant={useExistingLot ? 'default' : 'outline'}
                     onClick={() => setUseExistingLot(true)}
+                    size="lg"
                     className="flex-1"
                   >
                     Use Existing Lot
@@ -463,9 +470,9 @@ export default function CheckInPage() {
                 </div>
 
                 {useExistingLot ? (
-                  <div className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="select-lot">Select Lot</Label>
+                  <div className="space-y-5">
+                    <div className="space-y-3">
+                      <Label htmlFor="select-lot" className="text-base font-semibold">Select Lot</Label>
                       <Select value={selectedLotId} onValueChange={(value) => {
                         setSelectedLotId(value);
                         const lot = lotsData?.getLots.find((l: LotData) => l.lotId === value);
@@ -553,8 +560,8 @@ export default function CheckInPage() {
                 )}
 
                 {!useExistingLot && (
-                  <Button onClick={handleCreateLot} disabled={creatingLot} className="w-full">
-                    {creatingLot && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  <Button onClick={handleCreateLot} disabled={creatingLot} size="lg" className="w-full">
+                    {creatingLot && <Loader2 className="mr-2 h-5 w-5 animate-spin" />}
                     Create Lot
                   </Button>
                 )}
@@ -574,9 +581,10 @@ export default function CheckInPage() {
                 <Button
                   variant="outline"
                   onClick={() => setShowBarcodeScanner(true)}
+                  size="lg"
                   className="w-full"
                 >
-                  <QrCodeIcon className="mr-2 h-4 w-4" />
+                  <QrCodeIcon className="mr-2 h-5 w-5" />
                   Scan Barcode
                 </Button>
 
@@ -646,18 +654,18 @@ export default function CheckInPage() {
                 </div>
 
                 {selectedDrug && (
-                  <Card className="bg-muted/50">
-                    <CardContent className="pt-4">
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <p className="font-bold">{selectedDrug.medicationName}</p>
+                  <Card className="bg-accent/50 border-primary/20 animate-fade-in">
+                    <CardContent className="pt-5">
+                      <div className="flex justify-between items-start gap-3">
+                        <div className="space-y-1">
+                          <p className="font-bold text-lg">{selectedDrug.medicationName}</p>
                           <p className="text-sm text-muted-foreground">
                             {selectedDrug.strength} {selectedDrug.strengthUnit} - {selectedDrug.form}
                           </p>
                           <p className="text-xs text-muted-foreground">NDC: {selectedDrug.ndcId}</p>
                         </div>
                         {selectedDrug.inInventory && (
-                          <Badge>Already in Inventory</Badge>
+                          <Badge className="bg-primary/10 text-primary border-primary/20">Already in Inventory</Badge>
                         )}
                       </div>
                     </CardContent>
@@ -669,6 +677,7 @@ export default function CheckInPage() {
                     <Button
                       variant="outline"
                       onClick={() => setShowManualEntry(!showManualEntry)}
+                      size="lg"
                       className="w-full"
                     >
                       {showManualEntry ? 'Hide Manual Entry' : 'Enter Drug Manually'}
@@ -762,11 +771,11 @@ export default function CheckInPage() {
                   </>
                 )}
 
-                <div className="flex justify-between mt-6">
-                  <Button variant="outline" onClick={prevStep}>
+                <div className="flex flex-col-reverse sm:flex-row justify-between gap-3 mt-8 pt-6 border-t">
+                  <Button variant="outline" onClick={prevStep} className="w-full sm:w-auto">
                     Previous
                   </Button>
-                  <Button onClick={nextStep} disabled={!isStep2Valid()}>
+                  <Button onClick={nextStep} disabled={!isStep2Valid()} className="w-full sm:w-auto">
                     Next Step
                   </Button>
                 </div>
@@ -775,8 +784,8 @@ export default function CheckInPage() {
           </Step>
 
           <Step label="Create Unit" description="Quantity and expiry">
-            <Card>
-              <CardContent className="pt-6 space-y-4">
+            <Card className="animate-fade-in">
+              <CardContent className="pt-6 space-y-5">
                 {selectedLot && selectedLot.maxCapacity && selectedLot.currentCapacity !== undefined && selectedLot.currentCapacity !== null && (
                   <LotCapacityAlert
                     currentCapacity={selectedLot.currentCapacity ?? 0}
@@ -786,8 +795,8 @@ export default function CheckInPage() {
                   />
                 )}
 
-                <div className="space-y-2">
-                  <Label htmlFor="total-qty">Total Quantity *</Label>
+                <div className="space-y-3">
+                  <Label htmlFor="total-qty" className="text-base font-semibold">Total Quantity *</Label>
                   <Input
                     id="total-qty"
                     type="number"
@@ -808,8 +817,8 @@ export default function CheckInPage() {
                   />
                 )}
 
-                <div className="space-y-2">
-                  <Label htmlFor="expiry-date">Expiry Date *</Label>
+                <div className="space-y-3">
+                  <Label htmlFor="expiry-date" className="text-base font-semibold">Expiry Date *</Label>
                   <DatePicker
                     date={expiryDate}
                     onDateChange={setExpiryDate}
@@ -817,21 +826,22 @@ export default function CheckInPage() {
                   />
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="unit-notes">Notes (Optional)</Label>
+                <div className="space-y-3">
+                  <Label htmlFor="unit-notes" className="text-base font-semibold">Notes (Optional)</Label>
                   <Textarea
                     id="unit-notes"
                     placeholder="Any additional notes"
                     value={unitNotes}
                     onChange={(e) => setUnitNotes(e.target.value)}
+                    className="min-h-[100px]"
                   />
                 </div>
 
-                <div className="flex justify-between mt-6">
-                  <Button variant="outline" onClick={prevStep}>
+                <div className="flex flex-col-reverse sm:flex-row justify-between gap-3 mt-8 pt-6 border-t">
+                  <Button variant="outline" onClick={prevStep} className="w-full sm:w-auto">
                     Previous
                   </Button>
-                  <Button onClick={handleCreateUnit} disabled={!isStep3Valid() || creatingUnit}>
+                  <Button onClick={handleCreateUnit} disabled={!isStep3Valid() || creatingUnit} className="w-full sm:w-auto">
                     {creatingUnit && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                     Create Unit
                   </Button>
@@ -845,11 +855,11 @@ export default function CheckInPage() {
         <Dialog open={showQRModal} onOpenChange={setShowQRModal}>
           <DialogContent className="max-w-2xl">
             <DialogHeader>
-              <DialogTitle>Unit Created Successfully</DialogTitle>
+              <DialogTitle className="text-2xl">Unit Created Successfully</DialogTitle>
             </DialogHeader>
-            <div className="space-y-4">
-              <Alert>
-                <AlertDescription>
+            <div className="space-y-5">
+              <Alert className="border-success/50 bg-success/5">
+                <AlertDescription className="text-base">
                   Unit has been added to inventory. Print the label below and attach it to the medication.
                 </AlertDescription>
               </Alert>
@@ -937,12 +947,12 @@ export default function CheckInPage() {
                 </div>
               </div>
               
-              <div className="flex justify-center gap-2">
-                <Button onClick={() => handlePrint()}>
-                  <Printer className="mr-2 h-4 w-4" />
+              <div className="flex flex-col sm:flex-row justify-center gap-3">
+                <Button onClick={() => handlePrint()} size="lg" className="w-full sm:w-auto">
+                  <Printer className="mr-2 h-5 w-5" />
                   Print Label
                 </Button>
-                <Button variant="outline" onClick={handleReset}>
+                <Button variant="outline" onClick={handleReset} size="lg" className="w-full sm:w-auto">
                   Add Another Unit
                 </Button>
               </div>

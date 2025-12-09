@@ -212,33 +212,39 @@ function CheckOutContent() {
 
   return (
     <AppShell>
-      <div className="space-y-6">
-        <PageHeader title="Check Out" description="Dispense medications to patients" showBackButton={false} />
+      <div className="space-y-6 sm:space-y-8">
+        <div className="space-y-2">
+          <h1 className="text-3xl sm:text-4xl font-bold tracking-tight">Check Out</h1>
+          <p className="text-base sm:text-lg text-muted-foreground">
+            Dispense medications to patients
+          </p>
+        </div>
 
         {!loadingStats && !hasInventory && (
-          <Alert>
-            <AlertCircle className="h-4 w-4" />
-            <AlertTitle>No Inventory</AlertTitle>
-            <AlertDescription>
+          <Alert className="animate-slide-in">
+            <AlertCircle className="h-5 w-5" />
+            <AlertTitle className="text-lg">No Inventory</AlertTitle>
+            <AlertDescription className="text-base">
               There are no medications in your inventory. Please check in medications before checking them out.
             </AlertDescription>
           </Alert>
         )}
 
-        <Card>
-          <CardContent className="pt-6 space-y-4">
+        <Card className="animate-fade-in">
+          <CardContent className="pt-6 space-y-5">
             <Button
               variant="outline"
               onClick={() => setShowQRScanner(true)}
               className="w-full"
+              size="lg"
             >
-              <QrCodeIcon className="mr-2 h-4 w-4" />
+              <QrCodeIcon className="mr-2 h-5 w-5" />
               Scan QR Code
             </Button>
 
-            <div className="flex gap-2">
-              <div className="flex-1 space-y-2">
-                <Label htmlFor="unit-search">Search by Unit ID, Generic Name, or Strength</Label>
+            <div className="flex flex-col sm:flex-row gap-3">
+              <div className="flex-1 space-y-3">
+                <Label htmlFor="unit-search" className="text-base font-semibold">Search by Unit ID, Generic Name, or Strength</Label>
                 <Input
                   id="unit-search"
                   placeholder="Enter unit ID, generic name (e.g., Lisinopril), or strength (e.g., 10)"
@@ -250,43 +256,45 @@ function CheckOutContent() {
                     }
                   }}
                 />
-                <p className="text-xs text-muted-foreground">
+                <p className="text-sm text-muted-foreground">
                   Search by unit ID, medication generic name, or strength value
                 </p>
               </div>
-              <Button onClick={handleSearch} disabled={loadingUnit} className="mt-8">
-                {loadingUnit && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              <Button onClick={handleSearch} disabled={loadingUnit} size="lg" className="sm:mt-8 w-full sm:w-auto">
+                {loadingUnit && <Loader2 className="mr-2 h-5 w-5 animate-spin" />}
                 Search
               </Button>
             </div>
 
             {searchData?.searchUnitsByQuery && searchData.searchUnitsByQuery.length > 0 && (
-              <Card>
+              <Card className="animate-slide-in">
                 <CardHeader>
-                  <CardTitle className="text-lg">Search Results</CardTitle>
+                  <CardTitle className="text-xl">Search Results</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="overflow-x-auto">
+                  <div className="overflow-x-auto -mx-1">
                     <Table>
                       <TableHeader>
                         <TableRow>
-                          <TableHead>Medication</TableHead>
-                          <TableHead>Generic Name</TableHead>
-                          <TableHead>Strength</TableHead>
-                          <TableHead>Available</TableHead>
-                          <TableHead>Expiry</TableHead>
-                          <TableHead>Action</TableHead>
+                          <TableHead className="font-semibold">Medication</TableHead>
+                          <TableHead className="font-semibold">Generic Name</TableHead>
+                          <TableHead className="font-semibold">Strength</TableHead>
+                          <TableHead className="font-semibold">Available</TableHead>
+                          <TableHead className="font-semibold">Expiry</TableHead>
+                          <TableHead className="font-semibold">Action</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
                         {searchData.searchUnitsByQuery.map((unit: UnitData) => (
-                          <TableRow key={unit.unitId}>
-                            <TableCell className="font-medium">{unit.drug.medicationName}</TableCell>
+                          <TableRow key={unit.unitId} className="hover:bg-accent/50">
+                            <TableCell className="font-semibold">{unit.drug.medicationName}</TableCell>
                             <TableCell>{unit.drug.genericName}</TableCell>
                             <TableCell>
                               {unit.drug.strength} {unit.drug.strengthUnit}
                             </TableCell>
-                            <TableCell>{unit.availableQuantity}</TableCell>
+                            <TableCell>
+                              <Badge variant="secondary">{unit.availableQuantity}</Badge>
+                            </TableCell>
                             <TableCell>{new Date(unit.expiryDate).toLocaleDateString()}</TableCell>
                             <TableCell>
                               <Button size="sm" onClick={() => handleSelectUnit(unit)}>
@@ -305,53 +313,53 @@ function CheckOutContent() {
         </Card>
 
         {selectedUnit && (
-          <Card>
+          <Card className="animate-fade-in">
             <CardContent className="pt-6 space-y-6">
-              <div className="flex items-start justify-between">
-                <h3 className="text-2xl font-bold">Unit Details</h3>
-                <Badge variant={selectedUnit.availableQuantity > 0 ? 'default' : 'destructive'} className="text-lg px-3 py-1">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                <h3 className="text-2xl sm:text-3xl font-bold">Unit Details</h3>
+                <Badge variant={selectedUnit.availableQuantity > 0 ? 'default' : 'destructive'} className="text-base sm:text-lg px-4 py-2">
                   {selectedUnit.availableQuantity} Available
                 </Badge>
               </div>
 
-              <Card className="bg-blue-50 dark:bg-blue-950/20 border-blue-200">
-                <CardContent className="pt-4 space-y-2">
-                  <h4 className="text-lg font-bold">{selectedUnit.drug.medicationName}</h4>
-                  <p className="text-sm text-muted-foreground">
+              <Card className="bg-primary/5 border-primary/20">
+                <CardContent className="pt-5 space-y-3">
+                  <h4 className="text-xl font-bold">{selectedUnit.drug.medicationName}</h4>
+                  <p className="text-base text-muted-foreground">
                     Generic: {selectedUnit.drug.genericName}
                   </p>
                   <div className="flex items-center gap-2">
-                    <span className="text-sm">Strength:</span>
+                    <span className="text-sm font-semibold">Strength:</span>
                     <Badge variant="outline">
                       {selectedUnit.drug.strength} {selectedUnit.drug.strengthUnit}
                     </Badge>
                   </div>
-                  <p className="text-sm">Form: {selectedUnit.drug.form}</p>
+                  <p className="text-base"><span className="font-semibold">Form:</span> {selectedUnit.drug.form}</p>
                   {selectedUnit.drug.ndcId && (
-                    <p className="text-sm font-mono">NDC: {selectedUnit.drug.ndcId}</p>
+                    <p className="text-sm font-mono"><span className="font-semibold">NDC:</span> {selectedUnit.drug.ndcId}</p>
                   )}
                 </CardContent>
               </Card>
 
-              <div className="grid grid-cols-3 gap-4">
-                <div>
-                  <p className="text-sm text-muted-foreground mb-1">Total Quantity</p>
-                  <Badge variant="secondary" className="text-base px-3 py-1">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6">
+                <div className="space-y-2">
+                  <p className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Total Quantity</p>
+                  <Badge variant="secondary" className="text-base px-4 py-2">
                     {selectedUnit.totalQuantity}
                   </Badge>
                 </div>
-                <div>
-                  <p className="text-sm text-muted-foreground mb-1">Expiry Date</p>
-                  <Badge 
+                <div className="space-y-2">
+                  <p className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Expiry Date</p>
+                  <Badge
                     variant={new Date(selectedUnit.expiryDate) < new Date() ? 'destructive' : 'secondary'}
-                    className="text-base px-3 py-1"
+                    className="text-base px-4 py-2"
                   >
                     {new Date(selectedUnit.expiryDate).toLocaleDateString()}
                   </Badge>
                 </div>
-                <div>
-                  <p className="text-sm text-muted-foreground mb-1">Source</p>
-                  <p className="font-bold">{selectedUnit.lot?.source}</p>
+                <div className="space-y-2">
+                  <p className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Source</p>
+                  <p className="font-bold text-base">{selectedUnit.lot?.source}</p>
                 </div>
               </div>
 
@@ -362,12 +370,12 @@ function CheckOutContent() {
                 </div>
               )}
 
-              <div className="pt-4">
-                <h4 className="text-lg font-semibold mb-4">Dispense Medication</h4>
+              <div className="pt-6 border-t">
+                <h4 className="text-xl sm:text-2xl font-bold mb-6">Dispense Medication</h4>
 
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="quantity">Quantity to Dispense *</Label>
+                <div className="space-y-5">
+                  <div className="space-y-3">
+                    <Label htmlFor="quantity" className="text-base font-semibold">Quantity to Dispense *</Label>
                     <Input
                       id="quantity"
                       type="number"
@@ -379,8 +387,8 @@ function CheckOutContent() {
                     />
                   </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="patient-name">Patient Name (Optional)</Label>
+                  <div className="space-y-3">
+                    <Label htmlFor="patient-name" className="text-base font-semibold">Patient Name (Optional)</Label>
                     <Input
                       id="patient-name"
                       placeholder="Enter patient or recipient name"
@@ -389,8 +397,8 @@ function CheckOutContent() {
                     />
                   </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="patient-ref">Patient Reference ID (Optional)</Label>
+                  <div className="space-y-3">
+                    <Label htmlFor="patient-ref" className="text-base font-semibold">Patient Reference ID (Optional)</Label>
                     <Input
                       id="patient-ref"
                       placeholder="Patient identifier or code"
@@ -399,22 +407,23 @@ function CheckOutContent() {
                     />
                   </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="checkout-notes">Notes (Optional)</Label>
+                  <div className="space-y-3">
+                    <Label htmlFor="checkout-notes" className="text-base font-semibold">Notes (Optional)</Label>
                     <Textarea
                       id="checkout-notes"
                       placeholder="Any additional notes"
                       value={notes}
                       onChange={(e) => setNotes(e.target.value)}
+                      className="min-h-[100px]"
                     />
                   </div>
 
-                  <div className="flex gap-2">
-                    <Button onClick={handleCheckOut} disabled={checkingOut}>
+                  <div className="flex flex-col sm:flex-row gap-3 pt-4">
+                    <Button onClick={handleCheckOut} disabled={checkingOut} className="w-full sm:w-auto" size="lg">
                       {checkingOut && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                       Check Out
                     </Button>
-                    <Button variant="outline" onClick={handleReset}>
+                    <Button variant="outline" onClick={handleReset} className="w-full sm:w-auto" size="lg">
                       Cancel
                     </Button>
                   </div>

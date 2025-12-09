@@ -153,44 +153,51 @@ export default function ReportsPage() {
 
   return (
     <AppShell>
-      <div className="space-y-6">
-        <PageHeader title="Reports" description="Transaction logs and audit trail" showBackButton={false} />
+      <div className="space-y-6 sm:space-y-8">
+        <div className="space-y-2">
+          <h1 className="text-3xl sm:text-4xl font-bold tracking-tight">Reports</h1>
+          <p className="text-base sm:text-lg text-muted-foreground">
+            Transaction logs and audit trail
+          </p>
+        </div>
 
-        <Card>
-          <CardContent className="pt-6 space-y-4">
-            <Alert>
-              <Info className="h-4 w-4" />
-              <AlertDescription>
+        <Card className="animate-fade-in">
+          <CardContent className="pt-6 space-y-5">
+            <Alert className="border-primary/20 bg-primary/5">
+              <Info className="h-5 w-5 text-primary" />
+              <AlertDescription className="text-base">
                 Click on any row to view full transaction details, medication information, and timestamps.
               </AlertDescription>
             </Alert>
 
-            <Input
-              placeholder="Search transactions (medication, user, type, quantity, notes, patient ref...)"
-              value={search}
-              onChange={(e) => {
-                setSearch(e.target.value);
-                setPage(1);
-              }}
-            />
+            <div className="space-y-3">
+              <Input
+                placeholder="Search transactions (medication, user, type, quantity, notes, patient ref...)"
+                value={search}
+                onChange={(e) => {
+                  setSearch(e.target.value);
+                  setPage(1);
+                }}
+              />
+            </div>
           </CardContent>
 
           {loading ? (
-            <div className="flex justify-center items-center h-[200px]">
-              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            <div className="flex justify-center items-center h-[300px]">
+              <Loader2 className="h-10 w-10 animate-spin text-primary" />
             </div>
           ) : data?.getTransactions.transactions && data.getTransactions.transactions.length > 0 ? (
             <>
-              <div className="overflow-x-auto">
+              <div className="overflow-x-auto -mx-1">
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Date & Time</TableHead>
-                      <TableHead>Medication</TableHead>
-                      <TableHead>Type</TableHead>
-                      <TableHead>Quantity</TableHead>
-                      <TableHead>User</TableHead>
-                      <TableHead>Patient</TableHead>
+                      <TableHead className="font-semibold">Date & Time</TableHead>
+                      <TableHead className="font-semibold">Medication</TableHead>
+                      <TableHead className="font-semibold">Type</TableHead>
+                      <TableHead className="font-semibold">Quantity</TableHead>
+                      <TableHead className="font-semibold">User</TableHead>
+                      <TableHead className="font-semibold">Patient</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -198,14 +205,14 @@ export default function ReportsPage() {
                       <TableRow
                         key={tx.transactionId}
                         onClick={() => handleRowClick(tx)}
-                        className="cursor-pointer hover:bg-muted/50"
+                        className="cursor-pointer hover:bg-accent/50 transition-colors"
                       >
-                        <TableCell className="text-sm">{formatDate(tx.timestamp)}</TableCell>
+                        <TableCell className="text-sm font-medium">{formatDate(tx.timestamp)}</TableCell>
                         <TableCell>
                           {tx.unit?.drug ? (
-                            <div>
-                              <p className="text-sm font-medium">{tx.unit.drug.medicationName}</p>
-                              <p className="text-xs text-muted-foreground">
+                            <div className="space-y-1">
+                              <p className="text-sm font-semibold">{tx.unit.drug.medicationName}</p>
+                              <p className="text-sm text-muted-foreground">
                                 {tx.unit.drug.strength} {tx.unit.drug.strengthUnit} - {tx.unit.drug.form}
                               </p>
                             </div>
@@ -214,28 +221,29 @@ export default function ReportsPage() {
                           )}
                         </TableCell>
                         <TableCell>
-                          <Badge variant={getTypeBadgeVariant(tx.type)}>
+                          <Badge variant={getTypeBadgeVariant(tx.type)} className="px-3 py-1 capitalize">
                             {tx.type.replace('_', ' ')}
                           </Badge>
                         </TableCell>
                         <TableCell>
-                          <Badge 
+                          <Badge
                             variant="outline"
                             className={cn(
-                              tx.type === 'check_out' && 'border-red-500 text-red-600',
-                              tx.type === 'check_in' && 'border-green-500 text-green-600'
+                              'px-3 py-1 font-semibold',
+                              tx.type === 'check_out' && 'border-destructive/50 text-destructive bg-destructive/5',
+                              tx.type === 'check_in' && 'border-success/50 text-success bg-success/5'
                             )}
                           >
                             {tx.type === 'check_out' ? `-${tx.quantity}` : `+${tx.quantity}`}
                           </Badge>
                         </TableCell>
-                        <TableCell className="text-sm">{tx.user?.username || '-'}</TableCell>
+                        <TableCell className="text-sm font-medium">{tx.user?.username || '-'}</TableCell>
                         <TableCell>
                           {tx.patientName || tx.patientReferenceId ? (
-                            <div>
-                              {tx.patientName && <p className="text-sm">{tx.patientName}</p>}
+                            <div className="space-y-1">
+                              {tx.patientName && <p className="text-sm font-medium">{tx.patientName}</p>}
                               {tx.patientReferenceId && (
-                                <p className="text-xs text-muted-foreground">Ref: {tx.patientReferenceId}</p>
+                                <p className="text-sm text-muted-foreground">Ref: {tx.patientReferenceId}</p>
                               )}
                             </div>
                           ) : (
@@ -283,8 +291,8 @@ export default function ReportsPage() {
               )}
             </>
           ) : (
-            <div className="py-8 text-center text-muted-foreground">
-              No transactions found
+            <div className="py-16 text-center">
+              <p className="text-lg text-muted-foreground">No transactions found</p>
             </div>
           )}
         </Card>

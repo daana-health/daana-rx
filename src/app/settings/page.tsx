@@ -307,23 +307,26 @@ export default function SettingsPage() {
 
   return (
     <AppShell>
-      <div className="space-y-6">
-        <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-          <PageHeader 
-            title="Settings" 
-            description={isSuperadmin ? "Manage users and clinic configuration" : "Create and manage your clinics"} 
-            showBackButton={true} 
-          />
-          <div className="flex gap-2">
+      <div className="space-y-6 sm:space-y-8">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div className="space-y-2">
+            <h1 className="text-3xl sm:text-4xl font-bold tracking-tight">Settings</h1>
+            <p className="text-base sm:text-lg text-muted-foreground">
+              {isSuperadmin ? "Manage users and clinic configuration" : "Create and manage your clinics"}
+            </p>
+          </div>
+          <div className="flex flex-col sm:flex-row gap-3">
             <Button
               onClick={() => setCreateClinicModalOpened(true)}
               variant="outline"
+              size="lg"
+              className="w-full sm:w-auto"
             >
-              <Plus className="mr-2 h-4 w-4" />
+              <Plus className="mr-2 h-5 w-5" />
               Create New Clinic
             </Button>
             {isSuperadmin && (
-              <Button onClick={() => setModalOpened(true)}>
+              <Button onClick={() => setModalOpened(true)} size="lg" className="w-full sm:w-auto">
                 Send Invitation
               </Button>
             )}
@@ -332,9 +335,9 @@ export default function SettingsPage() {
 
         {/* Invitations Card - Superadmin only */}
         {isSuperadmin && (
-          <Card>
+          <Card className="animate-fade-in">
             <CardHeader>
-              <CardTitle>Pending Invitations</CardTitle>
+              <CardTitle className="text-2xl">Pending Invitations</CardTitle>
             </CardHeader>
             <CardContent>
               {invitationsData?.getInvitations && invitationsData.getInvitations.length > 0 ? (

@@ -184,53 +184,60 @@ export default function AdminPage() {
 
   return (
     <AppShell>
-      <div className="space-y-6">
-        <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-          <PageHeader title="Admin" description="Manage locations and clinic settings" showBackButton={true} />
-          <Button onClick={openCreateModal}>Create Location</Button>
+      <div className="space-y-6 sm:space-y-8">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div className="space-y-2">
+            <h1 className="text-3xl sm:text-4xl font-bold tracking-tight">Admin</h1>
+            <p className="text-base sm:text-lg text-muted-foreground">
+              Manage locations and clinic settings
+            </p>
+          </div>
+          <Button onClick={openCreateModal} size="lg" className="w-full sm:w-auto">Create Location</Button>
         </div>
 
-        <Card>
+        <Card className="animate-fade-in">
           <CardHeader>
-            <CardTitle>Locations</CardTitle>
+            <CardTitle className="text-2xl">Locations</CardTitle>
           </CardHeader>
           <CardContent>
             {data?.getLocations && data.getLocations.length > 0 ? (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Temperature</TableHead>
-                    <TableHead>Created</TableHead>
-                    <TableHead>Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {data?.getLocations.map((location: LocationData) => (
-                    <TableRow key={location.locationId}>
-                      <TableCell className="font-medium">{location.name}</TableCell>
-                      <TableCell className="capitalize">{location.temp.replace('_', ' ')}</TableCell>
-                      <TableCell className="text-sm">{new Date(location.createdAt).toLocaleDateString()}</TableCell>
-                      <TableCell>
-                        <div className="flex gap-2">
-                          <Button size="sm" variant="outline" onClick={() => handleEdit(location)}>
-                            Edit
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="destructive"
-                            onClick={() => handleDelete(location.locationId)}
-                          >
-                            Delete
-                          </Button>
-                        </div>
-                      </TableCell>
+              <div className="overflow-x-auto -mx-1">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="font-semibold">Name</TableHead>
+                      <TableHead className="font-semibold">Temperature</TableHead>
+                      <TableHead className="font-semibold">Created</TableHead>
+                      <TableHead className="font-semibold">Actions</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {data?.getLocations.map((location: LocationData) => (
+                      <TableRow key={location.locationId} className="hover:bg-accent/50">
+                        <TableCell className="font-semibold">{location.name}</TableCell>
+                        <TableCell className="capitalize font-medium">{location.temp.replace('_', ' ')}</TableCell>
+                        <TableCell className="text-sm">{new Date(location.createdAt).toLocaleDateString()}</TableCell>
+                        <TableCell>
+                          <div className="flex flex-col sm:flex-row gap-3">
+                            <Button size="sm" variant="outline" onClick={() => handleEdit(location)}>
+                              Edit
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="destructive"
+                              onClick={() => handleDelete(location.locationId)}
+                            >
+                              Delete
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
             ) : (
-              <p className="text-sm text-muted-foreground">No locations created yet</p>
+              <p className="text-base text-muted-foreground text-center py-8">No locations created yet</p>
             )}
           </CardContent>
         </Card>
@@ -238,14 +245,14 @@ export default function AdminPage() {
         <Dialog open={modalOpened} onOpenChange={setModalOpened}>
           <DialogContent className="sm:max-w-[500px]">
             <DialogHeader>
-              <DialogTitle>{editingLocation ? 'Edit Location' : 'Create Location'}</DialogTitle>
-              <DialogDescription>
+              <DialogTitle className="text-2xl">{editingLocation ? 'Edit Location' : 'Create Location'}</DialogTitle>
+              <DialogDescription className="text-base">
                 {editingLocation ? 'Update the location details' : 'Add a new storage location for medications'}
               </DialogDescription>
             </DialogHeader>
-            <div className="space-y-4 py-4">
-              <div className="space-y-2">
-                <Label htmlFor="location-name">Location Name *</Label>
+            <div className="space-y-5 py-4">
+              <div className="space-y-3">
+                <Label htmlFor="location-name" className="text-base font-semibold">Location Name *</Label>
                 <Input
                   id="location-name"
                   placeholder="e.g., Main Refrigerator"
@@ -254,8 +261,8 @@ export default function AdminPage() {
                 />
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="temperature">Temperature *</Label>
+              <div className="space-y-3">
+                <Label htmlFor="temperature" className="text-base font-semibold">Temperature *</Label>
                 <Select value={temp} onValueChange={setTemp}>
                   <SelectTrigger id="temperature">
                     <SelectValue />

@@ -309,30 +309,39 @@ export default function InventoryPage() {
 
   return (
     <AppShell>
-      <div className="space-y-6">
-        <PageHeader title="Inventory" description="View and manage all units" showBackButton={false} />
+      <div className="space-y-6 sm:space-y-8">
+        <div className="space-y-2">
+          <h1 className="text-3xl sm:text-4xl font-bold tracking-tight">Inventory</h1>
+          <p className="text-base sm:text-lg text-muted-foreground">
+            View and manage all medication units
+          </p>
+        </div>
 
-        <Card>
-          <CardContent className="pt-6 space-y-4">
-            <Alert>
-              <Info className="h-4 w-4" />
-              <AlertDescription>
+        <Card className="animate-fade-in">
+          <CardContent className="pt-6 space-y-5">
+            <Alert className="border-primary/20 bg-primary/5">
+              <Info className="h-5 w-5 text-primary" />
+              <AlertDescription className="text-base">
                 Click on any row to view unit details, QR code, and transaction history. Use the action menu (⋮) for quick checkout or quarantine.
               </AlertDescription>
             </Alert>
 
-            <Input
-              placeholder="Search inventory (medication, NDC, source, lot, quantity, notes...)"
-              value={search}
-              onChange={(e) => {
-                setSearch(e.target.value);
-                setPage(1);
-              }}
-            />
+            <div className="space-y-3">
+              <Label htmlFor="inventory-search" className="text-base font-semibold">Search Inventory</Label>
+              <Input
+                id="inventory-search"
+                placeholder="Search by medication, NDC, source, lot, quantity, or notes..."
+                value={search}
+                onChange={(e) => {
+                  setSearch(e.target.value);
+                  setPage(1);
+                }}
+              />
+            </div>
 
-            <div className="flex flex-col gap-4 md:flex-row md:items-end">
-              <div className="flex-1">
-                <Label className="text-sm text-muted-foreground mb-2 block">Filter by Form:</Label>
+            <div className="flex flex-col gap-5 lg:flex-row lg:items-end">
+              <div className="flex-1 space-y-3">
+                <Label className="text-base font-semibold">Filter by Form</Label>
                 <div className="flex flex-wrap gap-2">
                   {['all', 'tablet', 'capsule', 'liquid', 'injection'].map((type) => (
                     <Button
@@ -351,8 +360,8 @@ export default function InventoryPage() {
                 </div>
               </div>
 
-              <div className="w-full md:w-[200px]">
-                <Label htmlFor="location-filter" className="text-sm mb-2 block">Filter by Location</Label>
+              <div className="w-full lg:w-[240px] space-y-3">
+                <Label htmlFor="location-filter" className="text-base font-semibold">Filter by Location</Label>
                 <Select value={filterLocation} onValueChange={(value) => {
                   setFilterLocation(value);
                   setPage(1);
@@ -374,22 +383,22 @@ export default function InventoryPage() {
           </CardContent>
 
           {loading && !data ? (
-            <div className="flex justify-center items-center h-[200px]">
-              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            <div className="flex justify-center items-center h-[300px]">
+              <Loader2 className="h-10 w-10 animate-spin text-primary" />
             </div>
           ) : filteredUnits.length > 0 ? (
             <>
-              <div className="overflow-x-auto">
+              <div className="overflow-x-auto -mx-1">
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Medication</TableHead>
-                      <TableHead>Strength</TableHead>
-                      <TableHead>Available</TableHead>
-                      <TableHead>Expiry</TableHead>
-                      <TableHead>Location</TableHead>
-                      <TableHead>Source</TableHead>
-                      <TableHead className="w-[60px]">Actions</TableHead>
+                      <TableHead className="font-semibold">Medication</TableHead>
+                      <TableHead className="font-semibold">Strength</TableHead>
+                      <TableHead className="font-semibold">Available</TableHead>
+                      <TableHead className="font-semibold">Expiry</TableHead>
+                      <TableHead className="font-semibold">Location</TableHead>
+                      <TableHead className="font-semibold">Source</TableHead>
+                      <TableHead className="w-[60px] font-semibold">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -403,19 +412,19 @@ export default function InventoryPage() {
                         <TableRow
                           key={unit.unitId}
                           onClick={() => handleRowClick(unit)}
-                          className="cursor-pointer hover:bg-muted/50"
+                          className="cursor-pointer hover:bg-accent/50 transition-colors"
                         >
                           <TableCell>
-                            <div>
-                              <div className="font-medium">{unit.drug.medicationName}</div>
-                              <div className="text-xs text-muted-foreground">{unit.drug.genericName}</div>
+                            <div className="space-y-1">
+                              <div className="font-semibold">{unit.drug.medicationName}</div>
+                              <div className="text-sm text-muted-foreground">{unit.drug.genericName}</div>
                             </div>
                           </TableCell>
-                          <TableCell>
+                          <TableCell className="font-medium">
                             {unit.drug.strength} {unit.drug.strengthUnit}
                           </TableCell>
                           <TableCell>
-                            <Badge variant={unit.availableQuantity > 0 ? 'default' : 'secondary'}>
+                            <Badge variant={unit.availableQuantity > 0 ? 'default' : 'secondary'} className="px-3 py-1">
                               {unit.availableQuantity} / {unit.totalQuantity}
                             </Badge>
                           </TableCell>
@@ -423,7 +432,8 @@ export default function InventoryPage() {
                             <Badge
                               variant={isExpired ? 'destructive' : isExpiringSoon ? 'outline' : 'secondary'}
                               className={cn(
-                                !isExpired && isExpiringSoon && 'border-orange-500 text-orange-600'
+                                'px-3 py-1',
+                                !isExpired && isExpiringSoon && 'border-warning/50 text-warning bg-warning/5'
                               )}
                             >
                               {new Date(unit.expiryDate).toLocaleDateString()}
@@ -431,7 +441,7 @@ export default function InventoryPage() {
                           </TableCell>
                           <TableCell>
                             {unit.lot?.location ? (
-                              <Badge variant="outline">
+                              <Badge variant="outline" className="px-3 py-1">
                                 {unit.lot.location.name}
                               </Badge>
                             ) : (
@@ -439,7 +449,7 @@ export default function InventoryPage() {
                             )}
                           </TableCell>
                           <TableCell>
-                            <span className="text-sm">{unit.lot?.source || '-'}</span>
+                            <span className="text-sm font-medium">{unit.lot?.source || '-'}</span>
                           </TableCell>
                           <TableCell>
                             <DropdownMenu>
@@ -717,12 +727,14 @@ export default function InventoryPage() {
                     <CardTitle className="text-lg">Quick Actions</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="flex gap-2">
+                    <div className="flex flex-col sm:flex-row gap-3">
                       <Button
                         onClick={() => router.push(`/checkout?unitId=${selectedUnit.unitId}`)}
                         disabled={selectedUnit.availableQuantity === 0}
+                        size="lg"
+                        className="w-full sm:w-auto"
                       >
-                        <ShoppingCart className="mr-2 h-4 w-4" />
+                        <ShoppingCart className="mr-2 h-5 w-5" />
                         Checkout
                       </Button>
                       <Button
@@ -732,9 +744,10 @@ export default function InventoryPage() {
                           handleQuarantine(selectedUnit, { stopPropagation: () => {} } as React.MouseEvent);
                         }}
                         disabled={selectedUnit.availableQuantity === 0}
-                        className="border-orange-500 text-orange-600 hover:bg-orange-50"
+                        size="lg"
+                        className="w-full sm:w-auto border-warning text-warning hover:bg-warning/10"
                       >
-                        <AlertTriangle className="mr-2 h-4 w-4" />
+                        <AlertTriangle className="mr-2 h-5 w-5" />
                         Quarantine All
                       </Button>
                     </div>
@@ -820,7 +833,7 @@ export default function InventoryPage() {
                     Cancel
                   </Button>
                   <Button onClick={handleQuickCheckoutSubmit} disabled={checkingOut}>
-                    {checkingOut && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    {checkingOut && <Loader2 className="mr-2 h-5 w-5 animate-spin" />}
                     Checkout
                   </Button>
                 </DialogFooter>
