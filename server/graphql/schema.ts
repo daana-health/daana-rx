@@ -331,13 +331,13 @@ export const typeDefs = `#graphql
     getDrug(drugId: ID!): Drug
 
     # Units
-    getUnits(page: Int, pageSize: Int, search: String): PaginatedUnits!
-    getUnit(unitId: ID!): Unit
-    searchUnitsByQuery(query: String!): [Unit!]!
+    getUnits(page: Int, pageSize: Int, search: String, clinicId: ID): PaginatedUnits!
+    getUnit(unitId: ID!, clinicId: ID): Unit
+    searchUnitsByQuery(query: String!, clinicId: ID): [Unit!]!
 
     # Transactions
-    getTransactions(page: Int, pageSize: Int, search: String, unitId: ID): PaginatedTransactions!
-    getTransaction(transactionId: ID!): Transaction
+    getTransactions(page: Int, pageSize: Int, search: String, unitId: ID, clinicId: ID): PaginatedTransactions!
+    getTransaction(transactionId: ID!, clinicId: ID): Transaction
 
     # Users
     getUsers: [User!]!

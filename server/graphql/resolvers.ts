@@ -156,36 +156,111 @@ export const resolvers = {
     // Units
     getUnits: async (
       _: unknown,
-      { page, pageSize, search }: { page?: number; pageSize?: number; search?: string },
+      { page, pageSize, search, clinicId }: { page?: number; pageSize?: number; search?: string; clinicId?: string },
       context: GraphQLContext
     ) => {
-      const { clinic } = requireAuth(context);
-      return unitService.getUnits(clinic.clinicId, page, pageSize, search);
+      const { user, clinic } = requireAuth(context);
+
+      // If clinicId is provided, verify user has access to it
+      const requestedClinicId = clinicId?.trim();
+      if (!requestedClinicId || requestedClinicId === clinic.clinicId) {
+        return unitService.getUnits(clinic.clinicId, page, pageSize, search);
+      }
+
+      // Verify the user can access the requested clinic
+      const hasAccess = await verifyUserClinicAccess(user.userId, requestedClinicId);
+      if (!hasAccess) {
+        throw new GraphQLError('Insufficient permissions', {
+          extensions: { code: 'FORBIDDEN' },
+        });
+      }
+
+      return unitService.getUnits(requestedClinicId, page, pageSize, search);
     },
 
-    getUnit: async (_: unknown, { unitId }: { unitId: string }, context: GraphQLContext) => {
-      const { clinic } = requireAuth(context);
-      return unitService.getUnitById(unitId, clinic.clinicId);
+    getUnit: async (_: unknown, { unitId, clinicId }: { unitId: string; clinicId?: string }, context: GraphQLContext) => {
+      const { user, clinic } = requireAuth(context);
+
+      // If clinicId is provided, verify user has access to it
+      const requestedClinicId = clinicId?.trim();
+      if (!requestedClinicId || requestedClinicId === clinic.clinicId) {
+        return unitService.getUnitById(unitId, clinic.clinicId);
+      }
+
+      // Verify the user can access the requested clinic
+      const hasAccess = await verifyUserClinicAccess(user.userId, requestedClinicId);
+      if (!hasAccess) {
+        throw new GraphQLError('Insufficient permissions', {
+          extensions: { code: 'FORBIDDEN' },
+        });
+      }
+
+      return unitService.getUnitById(unitId, requestedClinicId);
     },
 
-    searchUnitsByQuery: async (_: unknown, { query }: { query: string }, context: GraphQLContext) => {
-      const { clinic } = requireAuth(context);
-      return unitService.searchUnits(query, clinic.clinicId);
+    searchUnitsByQuery: async (_: unknown, { query, clinicId }: { query: string; clinicId?: string }, context: GraphQLContext) => {
+      const { user, clinic } = requireAuth(context);
+
+      // If clinicId is provided, verify user has access to it
+      const requestedClinicId = clinicId?.trim();
+      if (!requestedClinicId || requestedClinicId === clinic.clinicId) {
+        return unitService.searchUnits(query, clinic.clinicId);
+      }
+
+      // Verify the user can access the requested clinic
+      const hasAccess = await verifyUserClinicAccess(user.userId, requestedClinicId);
+      if (!hasAccess) {
+        throw new GraphQLError('Insufficient permissions', {
+          extensions: { code: 'FORBIDDEN' },
+        });
+      }
+
+      return unitService.searchUnits(query, requestedClinicId);
     },
 
     // Transactions
     getTransactions: async (
       _: unknown,
-      { page, pageSize, search, unitId }: { page?: number; pageSize?: number; search?: string; unitId?: string },
+      { page, pageSize, search, unitId, clinicId }: { page?: number; pageSize?: number; search?: string; unitId?: string; clinicId?: string },
       context: GraphQLContext
     ) => {
-      const { clinic } = requireAuth(context);
-      return transactionService.getTransactions(clinic.clinicId, page, pageSize, search, unitId);
+      const { user, clinic } = requireAuth(context);
+
+      // If clinicId is provided, verify user has access to it
+      const requestedClinicId = clinicId?.trim();
+      if (!requestedClinicId || requestedClinicId === clinic.clinicId) {
+        return transactionService.getTransactions(clinic.clinicId, page, pageSize, search, unitId);
+      }
+
+      // Verify the user can access the requested clinic
+      const hasAccess = await verifyUserClinicAccess(user.userId, requestedClinicId);
+      if (!hasAccess) {
+        throw new GraphQLError('Insufficient permissions', {
+          extensions: { code: 'FORBIDDEN' },
+        });
+      }
+
+      return transactionService.getTransactions(requestedClinicId, page, pageSize, search, unitId);
     },
 
-    getTransaction: async (_: unknown, { transactionId }: { transactionId: string }, context: GraphQLContext) => {
-      const { clinic } = requireAuth(context);
-      return transactionService.getTransactionById(transactionId, clinic.clinicId);
+    getTransaction: async (_: unknown, { transactionId, clinicId }: { transactionId: string; clinicId?: string }, context: GraphQLContext) => {
+      const { user, clinic } = requireAuth(context);
+
+      // If clinicId is provided, verify user has access to it
+      const requestedClinicId = clinicId?.trim();
+      if (!requestedClinicId || requestedClinicId === clinic.clinicId) {
+        return transactionService.getTransactionById(transactionId, clinic.clinicId);
+      }
+
+      // Verify the user can access the requested clinic
+      const hasAccess = await verifyUserClinicAccess(user.userId, requestedClinicId);
+      if (!hasAccess) {
+        throw new GraphQLError('Insufficient permissions', {
+          extensions: { code: 'FORBIDDEN' },
+        });
+      }
+
+      return transactionService.getTransactionById(transactionId, requestedClinicId);
     },
 
     // Users

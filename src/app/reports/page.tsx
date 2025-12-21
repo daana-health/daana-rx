@@ -34,8 +34,8 @@ import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
 
 const GET_TRANSACTIONS = gql`
-  query GetTransactions($page: Int, $pageSize: Int, $search: String) {
-    getTransactions(page: $page, pageSize: $pageSize, search: $search) {
+  query GetTransactions($page: Int, $pageSize: Int, $search: String, $clinicId: ID) {
+    getTransactions(page: $page, pageSize: $pageSize, search: $search, clinicId: $clinicId) {
       transactions {
         transactionId
         timestamp
@@ -129,8 +129,13 @@ export default function ReportsPage() {
   const [selectedTransaction, setSelectedTransaction] = useState<TransactionWithDetails | null>(null);
   const [modalOpened, setModalOpened] = useState(false);
 
+  // Get current clinic from localStorage
+  const clinicStr = typeof window !== 'undefined' ? localStorage.getItem('clinic') : null;
+  const clinicId = clinicStr ? (() => { try { return JSON.parse(clinicStr).clinicId as string | undefined; } catch { return undefined; } })() : undefined;
+
   const { data, loading } = useQuery<GetTransactionsResponse>(GET_TRANSACTIONS, {
-    variables: { page, pageSize: 20, search: search || undefined },
+    variables: { page, pageSize: 20, search: search || undefined, clinicId },
+    skip: !clinicId,
   });
 
   const totalPages = data

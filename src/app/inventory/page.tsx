@@ -65,8 +65,8 @@ import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
 
 const GET_UNITS = gql`
-  query GetUnits($page: Int, $pageSize: Int, $search: String) {
-    getUnits(page: $page, pageSize: $pageSize, search: $search) {
+  query GetUnits($page: Int, $pageSize: Int, $search: String, $clinicId: ID) {
+    getUnits(page: $page, pageSize: $pageSize, search: $search, clinicId: $clinicId) {
       units {
         unitId
         totalQuantity
@@ -109,8 +109,8 @@ const GET_LOCATIONS = gql`
 `;
 
 const GET_TRANSACTIONS = gql`
-  query GetTransactions($unitId: ID!) {
-    getTransactions(unitId: $unitId, page: 1, pageSize: 20) {
+  query GetTransactions($unitId: ID!, $clinicId: ID) {
+    getTransactions(unitId: $unitId, page: 1, pageSize: 20, clinicId: $clinicId) {
       transactions {
         transactionId
         timestamp
@@ -176,6 +176,10 @@ export default function InventoryPage() {
   const [checkoutModalOpened, setCheckoutModalOpened] = useState(false);
   const printRef = useRef<HTMLDivElement | null>(null);
 
+  // Get current clinic from localStorage
+  const clinicStr = typeof window !== 'undefined' ? localStorage.getItem('clinic') : null;
+  const clinicId = clinicStr ? (() => { try { return JSON.parse(clinicStr).clinicId as string | undefined; } catch { return undefined; } })() : undefined;
+
   // Combine search text with filters
   const getSearchQuery = () => {
     let query = search;
@@ -189,7 +193,8 @@ export default function InventoryPage() {
   };
 
   const { data, loading, refetch } = useQuery<{ getUnits: { units: UnitDataWithLocation[]; total: number; page: number; pageSize: number } }>(GET_UNITS, {
-    variables: { page, pageSize: 20, search: getSearchQuery() },
+    variables: { page, pageSize: 20, search: getSearchQuery(), clinicId },
+    skip: !clinicId,
   });
 
   const { data: locationsData } = useQuery<GetLocationsResponse>(GET_LOCATIONS);
@@ -228,7 +233,7 @@ export default function InventoryPage() {
   const handleRowClick = (unit: UnitDataWithLocation) => {
     setSelectedUnit(unit);
     setModalOpened(true);
-    getTransactions({ variables: { unitId: unit.unitId } });
+    getTransactions({ variables: { unitId: unit.unitId, clinicId } });
   };
 
   const handleCloseModal = () => {

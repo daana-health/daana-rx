@@ -51,11 +51,7 @@ export function LotCapacityAlert({
           <CapacityBadge 
             current={currentCapacity} 
             max={maxCapacity}
-          />{' '}
-          units
-          {showAvailable && availableCapacity !== null && (
-            <> ({availableCapacity} available)</>
-          )}
+          />
         </div>
         {percentage >= 100 && (
           <div className="mt-2 text-sm font-medium">
