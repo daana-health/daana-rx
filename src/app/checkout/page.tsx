@@ -4,11 +4,11 @@ import { useState, useEffect, Suspense, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useLazyQuery, useMutation, useQuery, gql } from '@apollo/client';
 import { QrCodeIcon, AlertCircle, Loader2, MoreVertical, ShoppingCart, AlertTriangle, QrCode as QrCodeIconAlt, Printer } from 'lucide-react';
-import { QRCodeSVG } from 'qrcode.react';
 import { useReactToPrint } from 'react-to-print';
 import { AppShell } from '../../components/layout/AppShell';
 import { QRScanner } from '../../components/QRScanner';
 import { GetUnitResponse, SearchUnitsResponse, UnitData } from '../../types/graphql';
+import { UnitLabel } from '@/components/unit-label/UnitLabel';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -734,7 +734,7 @@ function CheckOutContent() {
         )}
 
         <Dialog open={isCheckoutConfirmOpen} onOpenChange={setIsCheckoutConfirmOpen}>
-          <DialogContent className="sm:max-w-[500px]">
+          <DialogContent className="sm:max-w-[640px]">
             <DialogHeader>
               <DialogTitle>Choose checkout method</DialogTitle>
               <DialogDescription>
@@ -756,7 +756,7 @@ function CheckOutContent() {
               )}
             </div>
 
-            <DialogFooter className="flex-col sm:flex-row gap-2">
+            <DialogFooter className="flex-col gap-2 sm:flex-row sm:flex-wrap sm:justify-end sm:gap-2 sm:space-x-0">
               <Button
                 variant="outline"
                 onClick={() => setIsCheckoutConfirmOpen(false)}
@@ -809,105 +809,21 @@ function CheckOutContent() {
                   </CardHeader>
                   <CardContent className="flex justify-center">
                     <div ref={printRef}>
-                      <div style={{
-                        display: 'flex',
-                        border: '1px solid #ddd',
-                        padding: '12px',
-                        backgroundColor: 'white',
-                        fontFamily: 'Arial, sans-serif',
-                        width: '384px',
-                        height: '192px',
-                        boxSizing: 'border-box',
-                      }}>
-                        <div style={{
-                          display: 'flex',
-                          flexDirection: 'column',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          paddingRight: '12px',
-                          borderRight: '1px solid #ddd',
-                          minWidth: '130px',
-                        }}>
-                          <QRCodeSVG value={viewedUnit.unitId} size={100} level="H" />
-                          <div style={{ fontSize: '6px', marginTop: '4px', textAlign: 'center', wordBreak: 'break-all', maxWidth: '100px', lineHeight: 1.2 }}>
-                            {viewedUnit.unitId}
-                          </div>
-                        </div>
-
-                        <div style={{
-                          flex: 1,
-                          paddingLeft: '12px',
-                          fontSize: '9px',
-                          display: 'flex',
-                          flexDirection: 'column',
-                          overflow: 'hidden',
-                        }}>
-                          <div style={{
-                            fontSize: '8px',
-                            fontWeight: 'bold',
-                            backgroundColor: '#dc2626',
-                            color: 'white',
-                            padding: '2px 4px',
-                            marginBottom: '3px',
-                            textAlign: 'center',
-                            borderRadius: '2px',
-                          }}>
-                            DONATED MEDICATION
-                          </div>
-
-                          <div style={{ fontSize: '12px', fontWeight: 'bold', lineHeight: 1.1, marginBottom: '1px' }}>
-                            {viewedUnit.drug.medicationName}
-                          </div>
-                          <div style={{ fontSize: '9px', color: '#666', marginBottom: '3px' }}>
-                            ({viewedUnit.drug.genericName})
-                          </div>
-
-                          <div style={{ fontSize: '10px', fontWeight: '600', marginBottom: '3px' }}>
-                            {viewedUnit.drug.strength} {viewedUnit.drug.strengthUnit} - {viewedUnit.drug.form}
-                          </div>
-
-                          <div style={{ marginBottom: '2px', fontSize: '8px' }}>
-                            <span style={{ fontWeight: '600' }}>NDC: </span>
-                            {viewedUnit.drug.ndcId}
-                          </div>
-
-                          <div style={{ marginBottom: '2px', fontSize: '8px' }}>
-                            <span style={{ fontWeight: '600' }}>Mfr Lot#: </span>
-                            {viewedUnit.manufacturerLotNumber || 'NOT RECORDED'}
-                          </div>
-
-                          <div style={{ marginBottom: '2px', fontSize: '8px' }}>
-                            <span style={{ fontWeight: '600' }}>Qty: </span>
-                            {viewedUnit.availableQuantity} / {viewedUnit.totalQuantity}
-                          </div>
-
-                          <div style={{ marginBottom: '2px', fontSize: '8px' }}>
-                            <span style={{ fontWeight: '600' }}>EXP: </span>
-                            {new Date(viewedUnit.expiryDate).toLocaleDateString('en-US', { month: '2-digit', year: 'numeric' })}
-                          </div>
-
-                          <div style={{ marginBottom: '2px', fontSize: '8px' }}>
-                            <span style={{ fontWeight: '600' }}>Source: </span>
-                            {viewedUnit.lot?.source || 'N/A'}
-                          </div>
-
-                          {viewedUnit.lot?.location && (
-                            <div style={{ fontSize: '7px', color: '#666' }}>
-                              Store: {viewedUnit.lot.location.name}
-                            </div>
-                          )}
-
-                          <div style={{
-                            fontSize: '6px',
-                            color: '#888',
-                            marginTop: 'auto',
-                            borderTop: '1px solid #eee',
-                            paddingTop: '2px',
-                          }}>
-                            DaanaRX • For Clinic Use Only • FDA-Tracked Medication
-                          </div>
-                        </div>
-                      </div>
+                      <UnitLabel
+                        unitId={viewedUnit.unitId}
+                        medicationName={viewedUnit.drug.medicationName}
+                        genericName={viewedUnit.drug.genericName}
+                        strength={viewedUnit.drug.strength}
+                        strengthUnit={viewedUnit.drug.strengthUnit}
+                        form={viewedUnit.drug.form}
+                        ndcId={viewedUnit.drug.ndcId}
+                        manufacturerLotNumber={viewedUnit.manufacturerLotNumber}
+                        availableQuantity={viewedUnit.availableQuantity}
+                        totalQuantity={viewedUnit.totalQuantity}
+                        expiryDate={viewedUnit.expiryDate}
+                        donationSource={viewedUnit.lot?.source}
+                        locationName={viewedUnit.lot?.location?.name}
+                      />
                     </div>
                   </CardContent>
                 </Card>

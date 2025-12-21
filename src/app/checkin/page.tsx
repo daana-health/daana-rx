@@ -4,7 +4,6 @@ import { useState, useEffect, useRef } from 'react';
 import { useQuery, useMutation, gql } from '@apollo/client';
 import { useSelector } from 'react-redux';
 import { useRouter } from 'next/navigation';
-import { QRCodeSVG } from 'qrcode.react';
 import { useReactToPrint } from 'react-to-print';
 import { QrCodeIcon, Printer, AlertCircle, Loader2 } from 'lucide-react';
 import { AppShell } from '../../components/layout/AppShell';
@@ -38,6 +37,7 @@ import { DatePicker } from '@/components/ui/date-picker';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
+import { UnitLabel } from '@/components/unit-label/UnitLabel';
 
 const GET_LOCATIONS = gql`
   query GetLocations {
@@ -693,7 +693,7 @@ export default function CheckInPage() {
                           <Label htmlFor="med-name">Medication Name *</Label>
                           <Input
                             id="med-name"
-                            placeholder="e.g., Lisinopril 10mg Tablet"
+                            placeholder="e.g., Fluoxetine"
                             value={manualDrug.medicationName}
                             onChange={(e) => setManualDrug({ ...manualDrug, medicationName: e.target.value })}
                           />
@@ -703,7 +703,7 @@ export default function CheckInPage() {
                           <Label htmlFor="generic-name">Generic Name *</Label>
                           <Input
                             id="generic-name"
-                            placeholder="e.g., Lisinopril"
+                            placeholder="e.g., Prozac"
                             value={manualDrug.genericName}
                             onChange={(e) => setManualDrug({ ...manualDrug, genericName: e.target.value })}
                           />
@@ -885,83 +885,27 @@ export default function CheckInPage() {
               {/* Printable Label */}
               <div className="flex justify-center">
                 <div ref={printRef}>
-                  <div style={{ 
-                    display: 'flex', 
-                    border: '1px solid #ddd', 
-                    padding: '12px',
-                    backgroundColor: 'white',
-                    fontFamily: 'Arial, sans-serif',
-                    width: '384px',
-                    height: '192px',
-                    boxSizing: 'border-box',
-                  }}>
-                    {/* QR Code - Left Side */}
-                    <div style={{ 
-                      display: 'flex', 
-                      flexDirection: 'column', 
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      paddingRight: '12px',
-                      borderRight: '1px solid #ddd',
-                      minWidth: '130px',
-                    }}>
-                      <QRCodeSVG value={createdUnitId} size={100} level="H" />
-                      <div style={{ fontSize: '6px', marginTop: '4px', textAlign: 'center', wordBreak: 'break-all', maxWidth: '100px', lineHeight: 1.2 }}>
-                        {createdUnitId}
-                      </div>
-                    </div>
-                    
-                    {/* Label Information - Right Side */}
-                    <div style={{ 
-                      flex: 1, 
-                      paddingLeft: '12px',
-                      fontSize: '9px',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      overflow: 'hidden',
-                    }}>
-                      <div style={{ fontSize: '12px', fontWeight: 'bold', lineHeight: 1.1, marginBottom: '1px' }}>
-                        {selectedDrug?.medicationName || manualDrug.medicationName}
-                      </div>
-                      <div style={{ fontSize: '9px', color: '#666', marginBottom: '3px' }}>
-                        ({selectedDrug?.genericName || manualDrug.genericName})
-                      </div>
-                      
-                      <div style={{ fontSize: '10px', fontWeight: '600', marginBottom: '3px' }}>
-                        {selectedDrug?.strength || manualDrug.strength} {selectedDrug?.strengthUnit || manualDrug.strengthUnit} - {selectedDrug?.form || manualDrug.form}
-                      </div>
-                      
-                      <div style={{ marginBottom: '2px' }}>
-                        <span style={{ fontWeight: '600' }}>NDC: </span>
-                        {selectedDrug?.ndcId || manualDrug.ndcId}
-                      </div>
-                      
-                      <div style={{ marginBottom: '2px' }}>
-                        <span style={{ fontWeight: '600' }}>Qty: </span>
-                        {totalQuantity}
-                      </div>
-                      
-                      <div style={{ marginBottom: '2px' }}>
-                        <span style={{ fontWeight: '600' }}>EXP: </span>
-                        {expiryDate ? new Date(expiryDate).toLocaleDateString('en-US', { month: '2-digit', year: 'numeric' }) : 'N/A'}
-                      </div>
-                      
-                      <div style={{ marginBottom: '2px' }}>
-                        <span style={{ fontWeight: '600' }}>LOT: </span>
-                        {lotSource || 'N/A'}
-                      </div>
-                      
-                      <div style={{ 
-                        fontSize: '7px', 
-                        color: '#888', 
-                        marginTop: 'auto',
-                        borderTop: '1px solid #eee',
-                        paddingTop: '2px',
-                      }}>
-                        DaanaRX • For Clinic Use Only
-                      </div>
-                    </div>
-                  </div>
+                  <UnitLabel
+                    unitId={createdUnitId}
+                    medicationName={selectedDrug?.medicationName || manualDrug.medicationName}
+                    genericName={selectedDrug?.genericName || manualDrug.genericName}
+                    strength={selectedDrug?.strength || manualDrug.strength}
+                    strengthUnit={selectedDrug?.strengthUnit || manualDrug.strengthUnit}
+                    form={selectedDrug?.form || manualDrug.form}
+                    ndcId={selectedDrug?.ndcId || manualDrug.ndcId}
+                    manufacturerLotNumber={manufacturerLotNumber || null}
+                    availableQuantity={availableQuantity || totalQuantity}
+                    totalQuantity={totalQuantity}
+                    expiryDate={expiryDate}
+                    donationSource={selectedLot?.source || lotSource || null}
+                    locationName={
+                      (() => {
+                        const locId = selectedLot?.locationId || selectedLocationId;
+                        const loc = locationsData?.getLocations?.find((l: LocationData) => l.locationId === locId);
+                        return loc?.name || null;
+                      })()
+                    }
+                  />
                 </div>
               </div>
               

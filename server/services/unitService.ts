@@ -60,7 +60,7 @@ export async function createUnit(
     .select(`
       *,
       drug:drugs(*),
-      lot:lots(*),
+      lot:lots!units_lot_clinic_fkey(*),
       user:users(*)
     `)
     .single();
@@ -100,7 +100,7 @@ export async function getUnitById(unitId: string, clinicId: string): Promise<Uni
     .select(`
       *,
       drug:drugs(*),
-      lot:lots(*),
+      lot:lots!units_lot_clinic_fkey(*),
       user:users(*)
     `)
     .eq('unit_id', unitId)
@@ -128,7 +128,7 @@ export async function getUnits(
     .select(`
       *,
       drug:drugs(*),
-      lot:lots(*),
+      lot:lots!units_lot_clinic_fkey(*),
       user:users(*)
     `, { count: 'exact' })
     .eq('clinic_id', clinicId);
@@ -208,7 +208,7 @@ export async function searchUnits(query: string, clinicId: string): Promise<Unit
       .select(`
         *,
         drug:drugs(*),
-        lot:lots(*),
+        lot:lots!units_lot_clinic_fkey(*),
         user:users(*)
       `)
       .eq('clinic_id', clinicId)
@@ -305,7 +305,7 @@ export async function updateUnit(
     .select(`
       *,
       drug:drugs(*),
-      lot:lots(*),
+      lot:lots!units_lot_clinic_fkey(*),
       user:users(*)
     `)
     .single();

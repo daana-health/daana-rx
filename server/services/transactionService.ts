@@ -166,7 +166,7 @@ export async function checkOutMedicationFEFO(
       })
       .select(`
         *,
-        unit:units(*, drug:drugs(*)),
+        unit:units!transactions_unit_clinic_fkey(*, drug:drugs(*)),
         user:users(*)
       `)
       .single();
@@ -269,7 +269,7 @@ export async function checkOutUnit(
     })
     .select(`
       *,
-      unit:units(*),
+      unit:units!transactions_unit_clinic_fkey(*),
       user:users(*)
     `)
     .single();
@@ -301,7 +301,7 @@ export async function getTransactions(
     .from('transactions')
     .select(`
       *,
-      unit:units(*, drug:drugs(*), lot:lots(*, location:locations(*))),
+      unit:units!transactions_unit_clinic_fkey(*, drug:drugs(*), lot:lots!units_lot_clinic_fkey(*, location:locations!lots_location_clinic_fkey(*))),
       user:users(*)
     `, { count: 'exact' })
     .eq('clinic_id', clinicId);
@@ -367,7 +367,7 @@ export async function getTransactionById(
     .from('transactions')
     .select(`
       *,
-      unit:units(*, drug:drugs(*)),
+      unit:units!transactions_unit_clinic_fkey(*, drug:drugs(*)),
       user:users(*)
     `)
     .eq('transaction_id', transactionId)
@@ -404,7 +404,7 @@ export async function updateTransaction(
     .eq('clinic_id', clinicId)
     .select(`
       *,
-      unit:units(*, drug:drugs(*)),
+      unit:units!transactions_unit_clinic_fkey(*, drug:drugs(*)),
       user:users(*)
     `)
     .single();

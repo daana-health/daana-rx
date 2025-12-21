@@ -52,8 +52,9 @@ export interface TransactionData {
   timestamp: string;
   type: 'check_in' | 'check_out' | 'adjust';
   quantity: number;
-  notes?: string | null;
+  patientName?: string | null;
   patientReferenceId?: string | null;
+  notes?: string | null;
 }
 
 export interface UserData {
