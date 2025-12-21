@@ -6,15 +6,18 @@ import { supabaseServer } from '../utils/supabase';
 
 // Helper to verify user has access to a clinic
 async function verifyUserClinicAccess(userId: string, clinicId: string): Promise<boolean> {
-  const { data, error } = await supabaseServer.rpc('get_user_clinics', {
-    p_user_id: userId,
-  });
+  const { data: userRow, error } = await supabaseServer
+    .from('users')
+    .select('clinic_id, clinic_ids')
+    .eq('user_id', userId)
+    .single();
 
-  if (error || !data) {
-    return false;
-  }
+  if (error || !userRow) return false;
 
-  return data.some((clinic: any) => clinic.clinic_id === clinicId);
+  const primaryClinicId = userRow.clinic_id as string | null;
+  const clinicIds = (userRow.clinic_ids as string[] | null) ?? [];
+
+  return clinicId === primaryClinicId || clinicIds.includes(clinicId);
 }
 
 export async function authMiddleware(
@@ -38,6 +41,22 @@ export async function authMiddleware(
           const hasAccess = await verifyUserClinicAccess(user.userId, requestedClinicId);
           if (hasAccess) {
             clinic = await getClinicById(requestedClinicId);
+          }
+        }
+
+        // If no header clinic, prefer clinic from token payload (the "current clinic" at login/switch)
+        if (!clinic && payload.clinicId) {
+          const hasAccess = await verifyUserClinicAccess(user.userId, payload.clinicId);
+          if (hasAccess) {
+            clinic = await getClinicById(payload.clinicId);
+          }
+        }
+
+        // If still no clinic, prefer user's active clinic stored in DB
+        if (!clinic && user.activeClinicId) {
+          const hasAccess = await verifyUserClinicAccess(user.userId, user.activeClinicId);
+          if (hasAccess) {
+            clinic = await getClinicById(user.activeClinicId);
           }
         }
         
@@ -87,6 +106,22 @@ export async function createGraphQLContextFromNextRequest(req: any): Promise<Gra
           const hasAccess = await verifyUserClinicAccess(user.userId, requestedClinicId);
           if (hasAccess) {
             clinic = await getClinicById(requestedClinicId);
+          }
+        }
+
+        // If no header clinic, prefer clinic from token payload
+        if (!clinic && payload.clinicId) {
+          const hasAccess = await verifyUserClinicAccess(user.userId, payload.clinicId);
+          if (hasAccess) {
+            clinic = await getClinicById(payload.clinicId);
+          }
+        }
+
+        // If still no clinic, prefer user's active clinic stored in DB
+        if (!clinic && user.activeClinicId) {
+          const hasAccess = await verifyUserClinicAccess(user.userId, user.activeClinicId);
+          if (hasAccess) {
+            clinic = await getClinicById(user.activeClinicId);
           }
         }
         

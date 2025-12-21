@@ -43,6 +43,8 @@ export async function signUp(email: string, password: string, clinicName: string
         username,
         email,
         clinic_id: clinic.clinic_id,
+        active_clinic_id: clinic.clinic_id,
+        clinic_ids: [clinic.clinic_id],
         user_role: 'superadmin', // First user is superadmin
       })
       .select()
@@ -55,7 +57,7 @@ export async function signUp(email: string, password: string, clinicName: string
     // Generate JWT token
     const token = generateToken({
       userId: user.user_id,
-      clinicId: user.clinic_id,
+      clinicId: user.active_clinic_id || user.clinic_id,
       userRole: user.user_role,
     });
 
@@ -77,6 +79,7 @@ export async function signUp(email: string, password: string, clinicName: string
         password: '', // Never return password
         email: user.email,
         clinicId: user.clinic_id,
+        activeClinicId: user.active_clinic_id || user.clinic_id,
         userRole: user.user_role,
         createdAt: new Date(user.created_at),
         updatedAt: new Date(user.updated_at),
@@ -164,14 +167,16 @@ export async function signIn(email: string, password: string): Promise<AuthRespo
       throw new Error('User record not found');
     }
 
-    console.log('User record found:', { userId: user.user_id, email: user.email, clinicId: user.clinic_id });
+    console.log('User record found:', { userId: user.user_id, email: user.email, clinicId: user.clinic_id, activeClinicId: user.active_clinic_id });
+
+    const effectiveClinicId: string = user.active_clinic_id || user.clinic_id;
 
     // Get clinic
-    console.log('Fetching clinic record for clinic_id:', user.clinic_id);
+    console.log('Fetching clinic record for clinic_id:', effectiveClinicId);
     const { data: clinic, error: clinicError } = await supabaseServer
       .from('clinics')
       .select('*')
-      .eq('clinic_id', user.clinic_id)
+      .eq('clinic_id', effectiveClinicId)
       .single();
 
     if (clinicError) {
@@ -194,7 +199,7 @@ export async function signIn(email: string, password: string): Promise<AuthRespo
     // Generate JWT token
     const token = generateToken({
       userId: user.user_id,
-      clinicId: user.clinic_id,
+      clinicId: effectiveClinicId,
       userRole: user.user_role,
     });
 
@@ -206,6 +211,7 @@ export async function signIn(email: string, password: string): Promise<AuthRespo
         password: '',
         email: user.email,
         clinicId: user.clinic_id,
+        activeClinicId: effectiveClinicId,
         userRole: user.user_role,
         createdAt: new Date(user.created_at),
         updatedAt: new Date(user.updated_at),
@@ -250,6 +256,7 @@ export async function getUserById(userId: string): Promise<User | null> {
     password: '',
     email: user.email,
     clinicId: user.clinic_id,
+    activeClinicId: user.active_clinic_id || user.clinic_id,
     userRole: user.user_role,
     createdAt: new Date(user.created_at),
     updatedAt: new Date(user.updated_at),
@@ -586,6 +593,7 @@ export async function switchClinic(userId: string, clinicId: string): Promise<Au
       password: '',
       email: user.email,
       clinicId: clinic.clinic_id,
+      activeClinicId: clinic.clinic_id,
       userRole: userRole,
       createdAt: new Date(user.created_at),
       updatedAt: new Date(user.updated_at),

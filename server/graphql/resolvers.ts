@@ -30,6 +30,21 @@ function requireRole(context: GraphQLContext, allowedRoles: string[]) {
   return user;
 }
 
+async function verifyUserClinicAccess(userId: string, clinicId: string) {
+  const { data: userRow, error } = await supabaseServer
+    .from('users')
+    .select('clinic_id, clinic_ids')
+    .eq('user_id', userId)
+    .single();
+
+  if (error || !userRow) return false;
+
+  const primaryClinicId = userRow.clinic_id as string | null;
+  const clinicIds = (userRow.clinic_ids as string[] | null) ?? [];
+
+  return clinicId === primaryClinicId || clinicIds.includes(clinicId);
+}
+
 export const resolvers = {
   Query: {
     // Auth
@@ -52,11 +67,8 @@ export const resolvers = {
       }
 
       // Verify the user can access the requested clinic to avoid leaking data.
-      const { data, error } = await supabaseServer.rpc('get_user_clinics', {
-        p_user_id: user.userId,
-      });
-
-      if (error || !data || !data.some((c: any) => c.clinic_id === requestedClinicId)) {
+      const hasAccess = await verifyUserClinicAccess(user.userId, requestedClinicId);
+      if (!hasAccess) {
         throw new GraphQLError('Insufficient permissions', {
           extensions: { code: 'FORBIDDEN' },
         });
