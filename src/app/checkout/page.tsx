@@ -104,8 +104,8 @@ const SEARCH_UNITS = gql`
 `;
 
 const GET_DASHBOARD_STATS = gql`
-  query GetDashboardStats {
-    getDashboardStats {
+  query GetDashboardStats($clinicId: ID) {
+    getDashboardStats(clinicId: $clinicId) {
       totalUnits
     }
   }
@@ -158,7 +158,13 @@ function CheckOutContent() {
   const printRef = useRef<HTMLDivElement | null>(null);
 
   // Check if inventory is empty
-  const { data: dashboardData, loading: loadingStats } = useQuery(GET_DASHBOARD_STATS);
+  const clinicStr = typeof window !== 'undefined' ? localStorage.getItem('clinic') : null;
+  const clinicId = clinicStr ? (() => { try { return JSON.parse(clinicStr).clinicId as string | undefined; } catch { return undefined; } })() : undefined;
+
+  const { data: dashboardData, loading: loadingStats } = useQuery(GET_DASHBOARD_STATS, {
+    variables: { clinicId },
+    fetchPolicy: 'network-only',
+  });
   const hasInventory = dashboardData?.getDashboardStats?.totalUnits > 0;
 
   const [getUnit, { data: unitData, loading: loadingUnit, error: unitError }] = useLazyQuery<GetUnitResponse>(GET_UNIT);

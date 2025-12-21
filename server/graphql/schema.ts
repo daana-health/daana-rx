@@ -315,7 +315,7 @@ export const typeDefs = `#graphql
     checkEmailExists(email: String!): EmailCheckResult!
 
     # Dashboard
-    getDashboardStats: DashboardStats!
+    getDashboardStats(clinicId: ID): DashboardStats!
 
     # Locations
     getLocations: [Location!]!

@@ -11,7 +11,7 @@ import { Loader2, Package } from 'lucide-react';
 
 // Query to prefetch all essential data
 const PREFETCH_DATA = gql`
-  query PrefetchData {
+  query PrefetchData($clinicId: ID) {
     me {
       userId
       username
@@ -26,7 +26,7 @@ const PREFETCH_DATA = gql`
       secondaryColor
       logoUrl
     }
-    getDashboardStats {
+    getDashboardStats(clinicId: $clinicId) {
       totalUnits
       unitsExpiringSoon
       recentCheckIns
@@ -130,7 +130,10 @@ export function AppInitializer({ children }: AppInitializerProps) {
 
       // Check if data is already in cache by trying to read it synchronously
       try {
-        const cachedPrefetchData = apolloClient.readQuery({ query: PREFETCH_DATA });
+        const cachedPrefetchData = apolloClient.readQuery({
+          query: PREFETCH_DATA,
+          variables: { clinicId: clinic?.clinicId },
+        });
         const cachedClinicsData = apolloClient.readQuery({ query: GET_USER_CLINICS });
         
         // If both queries are cached, skip loading and initialize immediately
@@ -162,7 +165,7 @@ export function AppInitializer({ children }: AppInitializerProps) {
 
       try {
         // Prefetch essential data
-        await prefetchData();
+        await prefetchData({ variables: { clinicId: clinic?.clinicId } });
 
         setLoadingProgress(50);
         setLoadingMessage('Loading clinic information...');

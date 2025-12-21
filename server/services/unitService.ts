@@ -377,14 +377,18 @@ export async function getDashboardStats(clinicId: string) {
     .gt('available_quantity', 0);
 
   // Get units expiring soon (within 30 days)
+  const today = new Date();
+  const todayDate = today.toISOString().split('T')[0];
   const thirtyDaysFromNow = new Date();
   thirtyDaysFromNow.setDate(thirtyDaysFromNow.getDate() + 30);
+  const thirtyDaysDate = thirtyDaysFromNow.toISOString().split('T')[0];
 
   const { count: expiringSoon } = await supabaseServer
     .from('units')
     .select('*', { count: 'exact', head: true })
     .eq('clinic_id', clinicId)
-    .lte('expiry_date', thirtyDaysFromNow.toISOString())
+    .gte('expiry_date', todayDate)
+    .lte('expiry_date', thirtyDaysDate)
     .gt('available_quantity', 0);
 
   // Get recent check-ins (last 7 days)

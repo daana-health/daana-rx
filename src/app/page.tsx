@@ -2,6 +2,7 @@
 
 import { useQuery, gql } from '@apollo/client';
 import { useRouter } from 'next/navigation';
+import { useSelector } from 'react-redux';
 import { 
   Package,
   AlertTriangle,
@@ -22,10 +23,11 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { cn } from '@/lib/utils';
+import { RootState } from '@/store';
 
 const GET_DASHBOARD_STATS = gql`
-  query GetDashboardStats {
-    getDashboardStats {
+  query GetDashboardStats($clinicId: ID) {
+    getDashboardStats(clinicId: $clinicId) {
       totalUnits
       unitsExpiringSoon
       recentCheckIns
@@ -123,7 +125,12 @@ function StatCard({
 }
 
 export default function HomePage() {
-  const { data, loading, error } = useQuery(GET_DASHBOARD_STATS);
+  const clinicId = useSelector((state: RootState) => state.auth.clinic?.clinicId);
+  const { data, loading, error } = useQuery(GET_DASHBOARD_STATS, {
+    variables: { clinicId },
+    // Clinic is selected via header/variable; avoid cross-clinic cache reuse.
+    fetchPolicy: 'network-only',
+  });
   const router = useRouter();
 
   // Only show loading skeleton if we have no data and are loading

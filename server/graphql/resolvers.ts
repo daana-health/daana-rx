@@ -43,9 +43,26 @@ export const resolvers = {
     },
 
     // Dashboard
-    getDashboardStats: async (_: unknown, __: unknown, context: GraphQLContext) => {
-      const { clinic } = requireAuth(context);
-      return unitService.getDashboardStats(clinic.clinicId);
+    getDashboardStats: async (_: unknown, { clinicId }: { clinicId?: string }, context: GraphQLContext) => {
+      const { user, clinic } = requireAuth(context);
+
+      const requestedClinicId = clinicId?.trim();
+      if (!requestedClinicId || requestedClinicId === clinic.clinicId) {
+        return unitService.getDashboardStats(clinic.clinicId);
+      }
+
+      // Verify the user can access the requested clinic to avoid leaking data.
+      const { data, error } = await supabaseServer.rpc('get_user_clinics', {
+        p_user_id: user.userId,
+      });
+
+      if (error || !data || !data.some((c: any) => c.clinic_id === requestedClinicId)) {
+        throw new GraphQLError('Insufficient permissions', {
+          extensions: { code: 'FORBIDDEN' },
+        });
+      }
+
+      return unitService.getDashboardStats(requestedClinicId);
     },
 
     // Locations
