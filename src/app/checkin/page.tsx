@@ -254,15 +254,57 @@ export default function CheckInPage() {
     setSearchResults([]);
 
     try {
-      const result = await searchDrugs({ query: searchTerm });
-      if (result.data?.searchDrugs && result.data.searchDrugs.length > 0) {
-        setSearchResults(result.data.searchDrugs);
+      // Search local database first
+      const localResult = await searchDrugs({ query: searchTerm });
+      const localResults = localResult.data?.searchDrugs || [];
+
+      // Search external APIs in parallel
+      let externalResults: any[] = [];
+      try {
+        const externalResponse = await fetch(
+          `/api/drugs/search?q=${encodeURIComponent(searchTerm)}&limit=5`
+        );
+        if (externalResponse.ok) {
+          const externalData = await externalResponse.json();
+          externalResults = (externalData.results || []).map((drug: any) => ({
+            ...drug,
+            isExternal: true,
+            inInventory: false,
+          }));
+        }
+      } catch (externalError) {
+        console.error('External API search error:', externalError);
+        // Continue with local results only
+      }
+
+      // Combine results: local first (they're already in inventory), then external
+      const combinedResults = [...localResults, ...externalResults];
+
+      if (combinedResults.length > 0) {
+        setSearchResults(combinedResults);
         setShowDropdown(true);
       } else {
         setSearchResults([]);
         setShowDropdown(false);
+        // If no results and looks like NDC, try direct NDC lookup
         const cleanedNDC = searchTerm.replace(/[^0-9]/g, '');
         if (cleanedNDC.length >= 10) {
+          try {
+            const ndcResponse = await fetch(
+              `/api/drugs/ndc?code=${encodeURIComponent(cleanedNDC)}`
+            );
+            if (ndcResponse.ok) {
+              const ndcData = await ndcResponse.json();
+              if (ndcData.result) {
+                setSearchResults([{ ...ndcData.result, isExternal: true, inInventory: false }]);
+                setShowDropdown(true);
+                return;
+              }
+            }
+          } catch (ndcError) {
+            console.error('NDC lookup error:', ndcError);
+          }
+          // Prepopulate manual entry with NDC
           setManualDrug({ ...manualDrug, ndcId: cleanedNDC });
           setShowManualEntry(true);
         }
@@ -276,16 +318,30 @@ export default function CheckInPage() {
   };
 
   const handleSelectDrug = (drug: any) => {
-    setSelectedDrug(drug);
-    setSearchInput(drug.ndcId);
+    // Map the drug result to DrugData format
+    // External API results have extra fields that need to be filtered
+    const mappedDrug: DrugData = {
+      drugId: drug.drugId, // Will be undefined for external results
+      medicationName: drug.medicationName,
+      genericName: drug.genericName,
+      strength: drug.strength,
+      strengthUnit: drug.strengthUnit,
+      ndcId: drug.ndcId,
+      form: drug.form,
+      inInventory: drug.inInventory || false,
+    };
+
+    setSelectedDrug(mappedDrug);
+    setSearchInput(drug.ndcId || drug.medicationName);
     setSearchResults([]);
     setShowDropdown(false);
     setShowManualEntry(false);
+    
     toast({
       title: 'Drug Selected',
       description: drug.inInventory 
         ? `${drug.medicationName} (Already in inventory)` 
-        : drug.medicationName,
+        : `${drug.medicationName} - ${drug.strength}${drug.strengthUnit} ${drug.form}`,
     });
   };
 
@@ -631,22 +687,43 @@ export default function CheckInPage() {
                           <div
                             key={index}
                             className={cn(
-                              "p-3 rounded-md cursor-pointer hover:bg-accent",
-                              drug.inInventory && "bg-blue-50 dark:bg-blue-950/20"
+                              "p-3 rounded-md cursor-pointer hover:bg-accent transition-colors",
+                              drug.inInventory && "bg-blue-50 dark:bg-blue-950/20",
+                              drug.isExternal && "border border-green-200 dark:border-green-800"
                             )}
                             onClick={() => handleSelectDrug(drug)}
                           >
-                            <div className="flex justify-between items-start">
-                              <div>
+                            <div className="flex justify-between items-start gap-2">
+                              <div className="flex-1">
                                 <p className="font-semibold text-sm">{drug.medicationName}</p>
                                 <p className="text-xs text-muted-foreground">
+                                  {drug.genericName && drug.genericName !== drug.medicationName && (
+                                    <span className="block">{drug.genericName} • </span>
+                                  )}
                                   {drug.strength} {drug.strengthUnit} - {drug.form}
                                 </p>
-                                <p className="text-xs text-blue-600">NDC: {drug.ndcId}</p>
+                                {drug.ndcId && !drug.ndcId.startsWith('RXTERM-') && (
+                                  <p className="text-xs text-blue-600">NDC: {drug.ndcId}</p>
+                                )}
+                                {drug.ndcId && drug.ndcId.startsWith('RXTERM-') && (
+                                  <p className="text-xs text-amber-600">NDC: {drug.ndcId} (auto-generated)</p>
+                                )}
+                                {drug.manufacturer && (
+                                  <p className="text-xs text-muted-foreground mt-1">
+                                    Mfr: {drug.manufacturer}
+                                  </p>
+                                )}
                               </div>
-                              {drug.inInventory && (
-                                <Badge variant="secondary" className="text-xs">In Stock</Badge>
-                              )}
+                              <div className="flex flex-col gap-1 items-end">
+                                {drug.inInventory && (
+                                  <Badge variant="secondary" className="text-xs">In Stock</Badge>
+                                )}
+                                {drug.isExternal && (
+                                  <Badge variant="outline" className="text-xs bg-green-50 dark:bg-green-950/20 border-green-300 dark:border-green-800 text-green-700 dark:text-green-300">
+                                    {drug.source === 'openfda' ? 'FDA' : 'NLM'}
+                                  </Badge>
+                                )}
+                              </div>
                             </div>
                           </div>
                         ))}
@@ -659,16 +736,53 @@ export default function CheckInPage() {
                   <Card className="bg-accent/50 border-primary/20 animate-fade-in">
                     <CardContent className="pt-5">
                       <div className="flex justify-between items-start gap-3">
-                        <div className="space-y-1">
+                        <div className="space-y-1 flex-1">
                           <p className="font-bold text-lg">{selectedDrug.medicationName}</p>
                           <p className="text-sm text-muted-foreground">
                             {selectedDrug.strength} {selectedDrug.strengthUnit} - {selectedDrug.form}
                           </p>
-                          <p className="text-xs text-muted-foreground">NDC: {selectedDrug.ndcId}</p>
+                          {selectedDrug.ndcId && !selectedDrug.ndcId.startsWith('RXTERM-') && (
+                            <p className="text-xs text-muted-foreground">NDC: {selectedDrug.ndcId}</p>
+                          )}
+                          {selectedDrug.ndcId && selectedDrug.ndcId.startsWith('RXTERM-') && (
+                            <div className="space-y-2">
+                              <p className="text-xs text-amber-600 flex items-center gap-1">
+                                <AlertCircle className="h-3 w-3" />
+                                NDC: {selectedDrug.ndcId} (auto-generated - no FDA NDC available)
+                              </p>
+                              <p className="text-xs text-muted-foreground">
+                                💡 This drug data comes from NIH RxTerms. You can review and edit the details below if needed.
+                              </p>
+                            </div>
+                          )}
                         </div>
-                        {selectedDrug.inInventory && (
-                          <Badge className="bg-primary/10 text-primary border-primary/20">Already in Inventory</Badge>
-                        )}
+                        <div className="flex flex-col gap-2 items-end">
+                          {selectedDrug.inInventory && (
+                            <Badge className="bg-primary/10 text-primary border-primary/20">Already in Inventory</Badge>
+                          )}
+                          {selectedDrug.ndcId && selectedDrug.ndcId.startsWith('RXTERM-') && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                // Pre-fill manual entry with selected drug data
+                                setManualDrug({
+                                  medicationName: selectedDrug.medicationName,
+                                  genericName: selectedDrug.genericName,
+                                  strength: selectedDrug.strength,
+                                  strengthUnit: selectedDrug.strengthUnit,
+                                  ndcId: '', // Clear the auto-generated NDC so user can enter real one
+                                  form: selectedDrug.form,
+                                });
+                                setSelectedDrug(null);
+                                setShowManualEntry(true);
+                              }}
+                              className="text-xs"
+                            >
+                              Edit Details
+                            </Button>
+                          )}
+                        </div>
                       </div>
                     </CardContent>
                   </Card>
@@ -687,6 +801,14 @@ export default function CheckInPage() {
 
                     {showManualEntry && (
                       <div className="space-y-4 pt-4">
+                        {manualDrug.medicationName && !selectedDrug && (
+                          <Alert className="border-blue-200 bg-blue-50 dark:bg-blue-950/20">
+                            <AlertDescription className="text-sm">
+                              ℹ️ Pre-filled from search result. Please review and update the NDC code if you have the actual FDA NDC number.
+                            </AlertDescription>
+                          </Alert>
+                        )}
+                        
                         <h3 className="text-lg font-semibold">Manual Drug Entry:</h3>
                         
                         <div className="space-y-2">

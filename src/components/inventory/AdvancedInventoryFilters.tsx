@@ -45,6 +45,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
+import { RelatedMedications } from './RelatedMedications';
 
 const GET_LOCATIONS = gql`
   query GetLocations {
@@ -379,6 +380,17 @@ export function AdvancedInventoryFilters({
                   onChange={(e) => updateFilter('medicationName', e.target.value)}
                 />
               </div>
+
+              {/* Related Medications Feature */}
+              {filters.medicationName && filters.medicationName.length >= 2 && (
+                <RelatedMedications
+                  drugName={filters.medicationName}
+                  onSelectMedication={(medName) => {
+                    updateFilter('medicationName', medName);
+                    setSearchQuery(medName);
+                  }}
+                />
+              )}
 
               <div className="space-y-2">
                 <Label>Generic Name</Label>
