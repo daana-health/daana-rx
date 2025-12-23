@@ -6,7 +6,7 @@
  * - RxNav/RxNorm: Related medications and drug classes
  */
 
-import axios, { AxiosError } from 'axios';
+import axios from 'axios';
 
 // Types for API responses
 export interface OpenFDADrugResult {
@@ -410,9 +410,9 @@ class DrugApiService {
     if (!data || !Array.isArray(data) || data.length < 3) return [];
 
     const displayStrings = data[1] || [];
-    const synonymArrays = data[2] || [];
+    // Note: data[2] contains synonymArrays - reserved for future NDC extraction
 
-    return displayStrings.map((display: string, index: number) => {
+    return displayStrings.map((display: string) => {
       // RxTerms format: "MEDICATION (strength) [form]"
       // Example: "Ibuprofen 200 MG Oral Tablet [Advil]"
       const parts = display.match(/^(.+?)\s+(\d+(?:\.\d+)?)\s*(\w+)\s+(.+?)(?:\s+\[(.+?)\])?$/);
@@ -431,8 +431,8 @@ class DrugApiService {
         medicationName = parts[5] || genericName;
       }
 
-      // Try to extract NDC from synonyms if available
-      const synonyms = synonymArrays[index] || [];
+      // Try to extract NDC from synonyms if available (future enhancement)
+      // const synonyms = synonymArrays[index] || [];
       let ndcId = '';
       
       // RxTerms doesn't provide NDC, so generate a placeholder
