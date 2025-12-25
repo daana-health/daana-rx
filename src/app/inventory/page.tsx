@@ -14,6 +14,9 @@ import {
   ArrowUpDown,
   ArrowUp,
   ArrowDown,
+  Edit,
+  X as XIcon,
+  Save,
 } from 'lucide-react';
 import { useReactToPrint } from 'react-to-print';
 import { AppShell } from '../../components/layout/AppShell';
@@ -239,7 +242,7 @@ export default function InventoryPage() {
           ...selectedUnit,
           totalQuantity: editedUnit.totalQuantity,
           availableQuantity: editedUnit.availableQuantity,
-          expiryDate: new Date(editedUnit.expiryDate),
+          expiryDate: editedUnit.expiryDate,
           optionalNotes: editedUnit.optionalNotes,
         });
       }
@@ -805,14 +808,6 @@ export default function InventoryPage() {
                             {new Date(selectedUnit.expiryDate).toLocaleDateString()}
                           </p>
                         )}
-                      </div>
-                        <Badge variant={selectedUnit.availableQuantity > 0 ? 'default' : 'secondary'}>
-                          {selectedUnit.availableQuantity} / {selectedUnit.totalQuantity}
-                        </Badge>
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium">Expiry Date:</p>
-                        <p className="text-sm text-muted-foreground">{new Date(selectedUnit.expiryDate).toLocaleDateString()}</p>
                       </div>
                       {selectedUnit.lot && (
                         <>
