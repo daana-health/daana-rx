@@ -25,9 +25,6 @@
     "paths": {
       "@/*": [
         "./src/*"
-      ],
-      "@server/*": [
-        "./server/*"
       ]
     },
     "forceConsistentCasingInFileNames": true,
@@ -52,7 +49,6 @@
   ],
   "exclude": [
     "node_modules",
-    "dist",
-    "server/index.ts"
+    "dist"
   ]
 }

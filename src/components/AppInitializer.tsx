@@ -66,6 +66,12 @@ export function AppInitializer({ children }: AppInitializerProps) {
   const [isInitialized, setIsInitialized] = useState(false);
   const [loadingProgress, setLoadingProgress] = useState(0);
   const [loadingMessage, setLoadingMessage] = useState('Initializing...');
+  const [isMounted, setIsMounted] = useState(false);
+
+  // Prevent hydration mismatch by only rendering loading screen after mount
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   const [prefetchData, { data: prefetchDataResult, error: prefetchError }] = useLazyQuery(PREFETCH_DATA, {
     fetchPolicy: 'cache-first', // Use cache if available
@@ -184,8 +190,8 @@ export function AppInitializer({ children }: AppInitializerProps) {
     }
   }, [isAuthenticated, hasHydrated, isInitialized, prefetchData, getUserClinics, user, clinic, dispatch]);
 
-  // Show loading screen while initializing
-  if (isAuthenticated && !isInitialized) {
+  // Show loading screen while initializing (only after mount to prevent hydration mismatch)
+  if (isMounted && isAuthenticated && !isInitialized) {
     return (
       <div className="flex h-screen items-center justify-center bg-gradient-to-br from-blue-600 to-purple-700">
         <div className="flex flex-col items-center gap-6">

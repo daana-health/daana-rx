@@ -173,8 +173,8 @@ export default function InventoryPage() {
   const { toast } = useToast();
   const [page, setPage] = useState<number>(1);
   const [filters, setFilters] = useState<InventoryFiltersState>({});
-  const [sortField, setSortField] = useState<SortField | null>(null);
-  const [sortOrder, setSortOrder] = useState<SortOrder>('ASC');
+  const [sortField, setSortField] = useState<SortField | null>('CREATED_DATE');
+  const [sortOrder, setSortOrder] = useState<SortOrder>('DESC');
   const [selectedUnit, setSelectedUnit] = useState<UnitDataWithLocation | null>(null);
   const [modalOpened, setModalOpened] = useState<boolean>(false);
   const [quickCheckoutUnit, setQuickCheckoutUnit] = useState<UnitDataWithLocation | null>(null);

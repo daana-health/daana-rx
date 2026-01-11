@@ -462,11 +462,12 @@ export default function CheckInPage() {
 
   const [createUnit, { loading: creatingUnit }] = useMutation(CREATE_UNIT, {
     refetchQueries: ['GetDashboardStats', 'GetUnits', 'GetUnitsAdvanced'],
+    awaitRefetchQueries: true,
     onCompleted: (data) => {
       setCreatedUnitId(data.createUnit.unitId);
       toast({
         title: 'Success',
-        description: `Unit created successfully! Transaction logged.`,
+        description: `Unit created successfully! Inventory updated.`,
       });
       setActiveStep(3); // Move to confirmation screen
     },
@@ -524,6 +525,25 @@ export default function CheckInPage() {
     const drugData = selectedDrug || manualDrug;
     const qty = parseInt(totalQuantity, 10);
     const availQty = parseInt(availableQuantity, 10);
+
+    // Validate quantities
+    if (isNaN(qty) || qty <= 0) {
+      toast({
+        title: 'Error',
+        description: 'Total quantity must be a valid positive number',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (isNaN(availQty) || availQty < 0 || availQty > qty) {
+      toast({
+        title: 'Error',
+        description: 'Available quantity must be between 0 and total quantity',
+        variant: 'destructive',
+      });
+      return;
+    }
 
     // Prepare drug data for GraphQL (exclude display-only fields)
     const cleanDrugData = !selectedDrug?.drugId ? {

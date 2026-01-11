@@ -5,7 +5,7 @@ import { store } from '../store';
 import { logout } from '../store/authSlice';
 
 const httpLink = createHttpLink({
-  uri: process.env.NEXT_PUBLIC_GRAPHQL_URL || '/api/graphql',
+  uri: process.env.NEXT_PUBLIC_GRAPHQL_URL || 'https://daanarx-backend.onrender.com/graphql',
 });
 
 const authLink = setContext((_, { headers }) => {

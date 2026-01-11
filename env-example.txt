@@ -9,19 +9,12 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key_here
 # Supabase Service Role Key (Required for Backend)
 # Get from: https://app.supabase.com/project/YOUR_PROJECT/settings/api
 # ⚠️  WARNING: Keep this secret! Never commit to version control!
-SUPABASE_SERVICE_KEY=your_supabase_service_role_key_here
+SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key_here
 
 # JWT Secret (Required)
 # Generate a random 32+ character string
 # You can use: openssl rand -base64 32
 JWT_SECRET=your_random_secret_at_least_32_characters_here
-
-# GraphQL Backend URL (Development)
-NEXT_PUBLIC_GRAPHQL_URL=http://localhost:4000/graphql
-
-# CORS Configuration (Optional)
-# Comma-separated list of allowed origins
-ALLOWED_ORIGINS=http://localhost:3000,http://localhost:4000
 
 # Google OAuth (Optional)
 # Only needed if you want to enable Google Sign-In

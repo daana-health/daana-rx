@@ -117,9 +117,9 @@ class DrugApiService {
 
       // Clean query for NDC search (numbers only)
       const cleanedNDC = query.replace(/[^0-9-]/g, '');
-      
+
       let searchQuery = '';
-      
+
       // If query looks like an NDC (10-11 digits), search by NDC
       // NDC format: product_ndc field without openfda prefix
       if (cleanedNDC.length >= 10) {
@@ -132,7 +132,7 @@ class DrugApiService {
           console.warn('OpenFDA: Empty query after cleaning');
           return [];
         }
-        
+
         // Use correct field names: brand_name and generic_name (not openfda.brand_name)
         // Multiple terms with OR using space separation
         // Ref: https://open.fda.gov/apis/query-parameters/
@@ -165,7 +165,7 @@ class DrugApiService {
           console.log(`OpenFDA: No results found for query: ${query}`);
           return [];
         }
-        
+
         // Log other errors
         console.error('OpenFDA API error:', {
           status: error.response?.status,
@@ -182,11 +182,11 @@ class DrugApiService {
 
   /**
    * Search RxTerms via RxNorm API
-   * 
+   *
    * RxTerms API doesn't have a search endpoint, so we:
    * 1. Search RxNorm API to find drugs and get RxCUIs
    * 2. Fetch RxTerms info for each RxCUI to get prescribable details
-   * 
+   *
    * Docs: https://lhncbc.nlm.nih.gov/RxNav/APIs/RxTermsAPIs.html
    */
   private async searchRxTerms(query: string, limit: number = 10): Promise<DrugSearchResult[]> {
@@ -208,7 +208,7 @@ class DrugApiService {
       );
 
       const suggestions = searchResponse.data?.drugGroup?.conceptGroup || [];
-      
+
       // Extract RxCUIs from search results
       const rxcuis: string[] = [];
       for (const group of suggestions) {
@@ -227,12 +227,12 @@ class DrugApiService {
 
       // Step 2: Fetch RxTerms info for each RxCUI (limit to first 5 for performance)
       const rxcuisToFetch = rxcuis.slice(0, Math.min(5, limit));
-      const rxTermsPromises = rxcuisToFetch.map(rxcui => 
+      const rxTermsPromises = rxcuisToFetch.map(rxcui =>
         this.getRxTermsInfo(rxcui)
       );
 
       const rxTermsResults = await Promise.allSettled(rxTermsPromises);
-      
+
       const results: DrugSearchResult[] = [];
       for (const result of rxTermsResults) {
         if (result.status === 'fulfilled' && result.value) {
@@ -259,7 +259,7 @@ class DrugApiService {
   /**
    * Get RxTerms information for a specific RxCUI
    * Endpoint: /RxTerms/rxcui/{rxcui}/allinfo.json
-   * 
+   *
    * Returns prescribable drug information including:
    * - brandName, displayName, genericName
    * - strength, strengthUnit, doseForm, route
@@ -301,14 +301,14 @@ class DrugApiService {
       if (cached) return cached[0] || null;
 
       const cleanedNDC = ndc.replace(/[^0-9]/g, '');
-      
+
       if (!cleanedNDC || cleanedNDC.length < 10) {
         console.warn(`OpenFDA: Invalid NDC format: ${ndc}`);
         return null;
       }
 
       console.log(`OpenFDA NDC lookup: ${cleanedNDC}`);
-      
+
       const response = await axios.get(
         `${OPENFDA_BASE_URL}/drug/ndc.json`,
         {
@@ -337,7 +337,7 @@ class DrugApiService {
           console.log(`OpenFDA: NDC not found: ${ndc}`);
           return null;
         }
-        
+
         console.error('OpenFDA NDC lookup error:', {
           status: error.response?.status,
           message: error.message,
@@ -513,10 +513,7 @@ class DrugApiService {
 
   /**
    * Parse openFDA API results
-   */
-  /**
-   * Parse openFDA API results
-   * 
+   *
    * OpenFDA NDC response structure:
    * {
    *   "results": [{
@@ -537,13 +534,13 @@ class DrugApiService {
    *     }
    *   }]
    * }
-   * 
+   *
    * Fields can be at root level OR in openfda object (or both)
    */
   private parseOpenFDAResults(results: any[]): DrugSearchResult[] {
     return results.map(result => {
       const openfda = result.openfda || {};
-      
+
       // Try openfda object first (more detailed), then root level
       const brandName = openfda.brand_name?.[0] || result.brand_name || '';
       const genericName = openfda.generic_name?.[0] || result.generic_name || openfda.substance_name?.[0] || '';
@@ -568,11 +565,8 @@ class DrugApiService {
   }
 
   /**
-   * Parse RxTerms API results
-   */
-  /**
    * Parse RxTerms API structured response
-   * 
+   *
    * RxTerms response structure from /rxcui/{rxcui}/allinfo.json:
    * {
    *   "rxtermsProperties": {
@@ -596,28 +590,28 @@ class DrugApiService {
     const brandName = data.brandName || data.synonym || '';
     const genericName = data.fullGenericName || data.genericName || '';
     const displayName = data.displayName || '';
-    
+
     // Parse strength
     let strength = 0;
     let strengthUnit = 'mg';
-    
+
     if (data.strength) {
       const strengthValue = parseFloat(data.strength);
       if (!isNaN(strengthValue)) {
         strength = strengthValue;
       }
     }
-    
+
     if (data.strengthUnit) {
       strengthUnit = data.strengthUnit.toLowerCase();
     }
-    
+
     // Parse dose form
     const form = this.normalizeForm(data.doseForm || data.route || 'Tablet');
-    
+
     // Decide on medication name (brand if available, else generic)
     const medicationName = brandName || genericName || displayName;
-    
+
     // Validate the parsed data
     const validated = this.validateRxTermsData({
       medicationName,
@@ -627,11 +621,11 @@ class DrugApiService {
       form,
       originalDisplay: displayName,
     });
-    
+
     // Generate placeholder NDC
     const nameHash = this.simpleHash(validated.genericName);
     const ndcId = `RXTERM-${nameHash}-${validated.strength}${validated.strengthUnit}`.substring(0, 20);
-    
+
     return {
       source: 'rxterms',
       medicationName: validated.medicationName,
@@ -682,7 +676,7 @@ class DrugApiService {
         `RxTerms: No strength found for "${medicationName}". This may be incorrect.`
       );
       confidence -= 20; // Significant confidence reduction
-      
+
       // Try to extract from original display
       const strengthMatch = data.originalDisplay.match(/(\d+(?:\.\d+)?)\s*(mg|mcg|g|ml|unit)/i);
       if (strengthMatch) {
@@ -716,7 +710,7 @@ class DrugApiService {
       .replace(/\s*\(Oral\)\s*/gi, '')
       .replace(/\s*\(Topical\)\s*/gi, '')
       .trim();
-    
+
     genericName = genericName
       .replace(/\s*\(Injectable\)\s*/gi, '')
       .replace(/\s*\(Oral\)\s*/gi, '')
@@ -792,7 +786,7 @@ class DrugApiService {
    */
   private normalizeForm(form: string): string {
     const normalized = form.toLowerCase();
-    
+
     const formMap: { [key: string]: string } = {
       'tablet': 'Tablet',
       'capsule': 'Capsule',
@@ -890,4 +884,3 @@ class DrugApiService {
 }
 
 export const drugApiService = new DrugApiService();
-

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { drugApiService } from '../../../../../server/services/drugApiService';
+import { drugApiService } from '../../../../server/services/drugApiService';
 
 /**
  * API Route: Get drug by NDC code
