@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useQuery, gql } from '@apollo/client';
-import { Loader2, Filter, Download, RefreshCw } from 'lucide-react';
+import { Loader2, Filter, RefreshCw } from 'lucide-react';
 import { AppShell } from '../../components/layout/AppShell';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
