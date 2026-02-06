@@ -1,14 +1,15 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useMutation, gql } from '@apollo/client';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Settings } from 'lucide-react';
 import { AppShell } from '../../components/layout/AppShell';
 import { GetLocationsResponse, LocationData } from '../../types/graphql';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
 import {
   Select,
   SelectContent,
@@ -71,14 +72,42 @@ const DELETE_LOCATION = gql`
   }
 `;
 
+const GET_CLINIC = gql`
+  query GetClinic {
+    getClinic {
+      clinicId
+      name
+      requireLotLocation
+    }
+  }
+`;
+
+const UPDATE_CLINIC = gql`
+  mutation UpdateClinic($input: UpdateClinicInput!) {
+    updateClinic(input: $input) {
+      clinicId
+      requireLotLocation
+    }
+  }
+`;
+
 export default function AdminPage() {
   const { toast } = useToast();
   const [modalOpened, setModalOpened] = useState(false);
   const [editingLocation, setEditingLocation] = useState<LocationData | null>(null);
   const [name, setName] = useState('');
   const [temp, setTemp] = useState<string>('room_temp');
+  const [requireLotLocation, setRequireLotLocation] = useState(false);
 
   const { data, refetch } = useQuery<GetLocationsResponse>(GET_LOCATIONS);
+  const { data: clinicData, refetch: refetchClinic } = useQuery(GET_CLINIC);
+
+  // Initialize requireLotLocation from clinic data
+  useEffect(() => {
+    if (clinicData?.getClinic?.requireLotLocation !== undefined) {
+      setRequireLotLocation(clinicData.getClinic.requireLotLocation);
+    }
+  }, [clinicData]);
 
   const [createLocation, { loading: creating }] = useMutation(CREATE_LOCATION, {
     onCompleted: () => {
@@ -138,6 +167,34 @@ export default function AdminPage() {
     },
   });
 
+  const [updateClinic, { loading: updatingClinic }] = useMutation(UPDATE_CLINIC, {
+    onCompleted: () => {
+      toast({
+        title: 'Success',
+        description: 'Clinic settings updated',
+      });
+      refetchClinic();
+    },
+    onError: (error) => {
+      toast({
+        title: 'Error',
+        description: error.message,
+        variant: 'destructive',
+      });
+    },
+  });
+
+  const handleRequireLotLocationChange = (checked: boolean) => {
+    setRequireLotLocation(checked);
+    updateClinic({
+      variables: {
+        input: {
+          requireLotLocation: checked,
+        },
+      },
+    });
+  };
+
   const handleSubmit = () => {
     if (editingLocation) {
       updateLocation({
@@ -193,6 +250,35 @@ export default function AdminPage() {
           </div>
           <Button onClick={openCreateModal} size="lg" className="w-full sm:w-auto">Create Location</Button>
         </div>
+
+        {/* Clinic Settings Card */}
+        <Card className="animate-fade-in">
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <Settings className="h-5 w-5" />
+              <CardTitle className="text-2xl">Clinic Settings</CardTitle>
+            </div>
+            <CardDescription>Configure your clinic preferences</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="flex items-center justify-between">
+              <div className="space-y-1">
+                <Label htmlFor="require-lot-location" className="text-base font-semibold">
+                  Require Location (L/R) for Lot Codes
+                </Label>
+                <p className="text-sm text-muted-foreground">
+                  When enabled, users must specify Left (L) or Right (R) when creating new lots
+                </p>
+              </div>
+              <Switch
+                id="require-lot-location"
+                checked={requireLotLocation}
+                onCheckedChange={handleRequireLotLocationChange}
+                disabled={updatingClinic}
+              />
+            </div>
+          </CardContent>
+        </Card>
 
         <Card className="animate-fade-in">
           <CardHeader>

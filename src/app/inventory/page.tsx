@@ -479,7 +479,7 @@ export default function InventoryPage() {
                             <p className="text-xs text-muted-foreground mt-1 break-words">{unit.drug.genericName}</p>
                           </div>
                           <Badge variant={unit.availableQuantity > 0 ? 'default' : 'secondary'} className="px-2 py-1 text-xs whitespace-nowrap flex-shrink-0">
-                            {unit.availableQuantity} / {unit.totalQuantity}
+                            {Math.floor(unit.availableQuantity)} / {Math.floor(unit.totalQuantity)}
                           </Badge>
                         </div>
                         
@@ -613,7 +613,7 @@ export default function InventoryPage() {
                           </TableCell>
                           <TableCell>
                             <Badge variant={unit.availableQuantity > 0 ? 'default' : 'secondary'} className="px-3 py-1">
-                              {unit.availableQuantity} / {unit.totalQuantity}
+                              {Math.floor(unit.availableQuantity)} / {Math.floor(unit.totalQuantity)}
                             </Badge>
                           </TableCell>
                           <TableCell>
@@ -871,7 +871,7 @@ export default function InventoryPage() {
                           </div>
                         ) : (
                           <Badge variant={selectedUnit.availableQuantity > 0 ? 'default' : 'secondary'} className="mt-1">
-                            {selectedUnit.availableQuantity} / {selectedUnit.totalQuantity}
+                            {Math.floor(selectedUnit.availableQuantity)} / {Math.floor(selectedUnit.totalQuantity)}
                           </Badge>
                         )}
                       </div>

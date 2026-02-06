@@ -25,6 +25,7 @@ import {
   MapPin,
   Menu,
   Loader2,
+  ClipboardList,
 } from 'lucide-react';
 
 interface AppShellProps {
@@ -133,6 +134,7 @@ export function AppShell({ children }: AppShellProps) {
       { icon: PackageMinus, label: 'Check Out', href: '/checkout' },
       { icon: QrCode, label: 'Scan/Lookup', href: '/scan' },
       { icon: Package, label: 'Inventory', href: '/inventory' },
+      { icon: ClipboardList, label: 'Logs', href: '/logs' },
       { icon: FileText, label: 'Reports', href: '/reports' },
     ];
 

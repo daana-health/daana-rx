@@ -140,6 +140,20 @@ const CHECK_OUT_FEFO = gql`
   }
 `;
 
+const BATCH_CHECK_OUT_UNITS = gql`
+  mutation BatchCheckOutUnits($inputs: [BatchCheckOutItemInput!]!, $notes: String) {
+    batchCheckOutUnits(inputs: $inputs, notes: $notes) {
+      transactions {
+        transactionId
+        timestamp
+        quantity
+      }
+      totalItems
+      totalQuantity
+    }
+  }
+`;
+
 function CheckOutContent() {
   const searchParams = useSearchParams();
   const { toast } = useToast();
@@ -147,8 +161,6 @@ function CheckOutContent() {
   const [unitId, setUnitId] = useState('');
   const [selectedUnit, setSelectedUnit] = useState<UnitData | null>(null);
   const [quantity, setQuantity] = useState<string>('');
-  const [patientName, setPatientName] = useState('');
-  const [patientReference, setPatientReference] = useState('');
   const [notes, setNotes] = useState('');
   const [showQRScanner, setShowQRScanner] = useState(false);
   const [isCheckoutConfirmOpen, setIsCheckoutConfirmOpen] = useState(false);
@@ -156,6 +168,10 @@ function CheckOutContent() {
   const [viewedUnit, setViewedUnit] = useState<UnitData | null>(null);
   const [showUnitDetailsModal, setShowUnitDetailsModal] = useState(false);
   const printRef = useRef<HTMLDivElement | null>(null);
+
+  // Cart state for batch checkout
+  const [cart, setCart] = useState<Array<{ unit: UnitData; quantity: number }>>([]);
+  const [showCart, setShowCart] = useState(false);
 
   // Check if inventory is empty
   const clinicStr = typeof window !== 'undefined' ? localStorage.getItem('clinic') : null;
@@ -205,6 +221,81 @@ function CheckOutContent() {
       });
     },
   });
+
+  const [batchCheckOut, { loading: batchCheckingOut }] = useMutation(BATCH_CHECK_OUT_UNITS, {
+    onCompleted: (data) => {
+      const result = data.batchCheckOutUnits;
+      toast({
+        title: 'Success',
+        description: `Checked out ${result.totalItems} item(s), ${result.totalQuantity} total units`,
+      });
+      setCart([]);
+      setShowCart(false);
+      handleReset();
+    },
+    onError: (error) => {
+      toast({
+        title: 'Error',
+        description: error.message,
+        variant: 'destructive',
+      });
+    },
+  });
+
+  // Cart management functions
+  const addToCart = (unit: UnitData, qty: number) => {
+    const existingIndex = cart.findIndex((item) => item.unit.unitId === unit.unitId);
+    if (existingIndex >= 0) {
+      // Update existing item
+      const newCart = [...cart];
+      newCart[existingIndex].quantity += qty;
+      setCart(newCart);
+    } else {
+      // Add new item
+      setCart([...cart, { unit, quantity: qty }]);
+    }
+    toast({
+      title: 'Added to Cart',
+      description: `${unit.drug.medicationName} x${qty}`,
+    });
+  };
+
+  const removeFromCart = (unitId: string) => {
+    setCart(cart.filter((item) => item.unit.unitId !== unitId));
+  };
+
+  const updateCartQuantity = (unitId: string, qty: number) => {
+    const newCart = cart.map((item) =>
+      item.unit.unitId === unitId ? { ...item, quantity: qty } : item
+    );
+    setCart(newCart);
+  };
+
+  const getTotalCartItems = () => cart.length;
+  const getTotalCartQuantity = () => cart.reduce((sum, item) => sum + item.quantity, 0);
+
+  const handleBatchCheckout = () => {
+    if (cart.length === 0) {
+      toast({
+        title: 'Error',
+        description: 'Cart is empty',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    const inputs = cart.map((item) => ({
+      unitId: item.unit.unitId,
+      quantity: item.quantity,
+    }));
+
+    batchCheckOut({
+      variables: {
+        inputs,
+        notes: notes || undefined,
+      },
+    });
+  };
 
   const handleSearch = () => {
     if (unitId.trim().length >= 2) {
@@ -311,8 +402,6 @@ function CheckOutContent() {
         input: {
           unitId: selectedUnit.unitId,
           quantity: pendingQty,
-          patientName: patientName || undefined,
-          patientReferenceId: patientReference || undefined,
           notes: notes || undefined,
         },
       },
@@ -325,8 +414,6 @@ function CheckOutContent() {
     const ndcFromSelectedUnit = selectedUnit.drug.ndcId?.trim();
     const input: Record<string, unknown> = {
       quantity: pendingQty,
-      patientName: patientName || undefined,
-      patientReferenceId: patientReference || undefined,
       notes: notes || undefined,
     };
 
@@ -346,8 +433,6 @@ function CheckOutContent() {
     setUnitId('');
     setSelectedUnit(null);
     setQuantity('');
-    setPatientName('');
-    setPatientReference('');
     setNotes('');
     setIsCheckoutConfirmOpen(false);
     setPendingQty(null);
@@ -406,11 +491,25 @@ function CheckOutContent() {
   return (
     <AppShell>
       <div className="space-y-6 sm:space-y-8">
-        <div className="space-y-2">
-          <h1 className="text-3xl sm:text-4xl font-bold tracking-tight">Check Out</h1>
-          <p className="text-base sm:text-lg text-muted-foreground">
-            Dispense medications to patients
-          </p>
+        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+          <div className="space-y-2">
+            <h1 className="text-3xl sm:text-4xl font-bold tracking-tight">Check Out</h1>
+            <p className="text-base sm:text-lg text-muted-foreground">
+              Dispense medications to patients
+            </p>
+          </div>
+          {/* Cart Button */}
+          <Button
+            variant={cart.length > 0 ? 'default' : 'outline'}
+            onClick={() => setShowCart(true)}
+            className="relative"
+          >
+            <ShoppingCart className="mr-2 h-5 w-5" />
+            Cart
+            {cart.length > 0 && (
+              <Badge className="ml-2 px-2 py-0.5">{getTotalCartItems()}</Badge>
+            )}
+          </Button>
         </div>
 
         {!loadingStats && !hasInventory && (
@@ -634,7 +733,17 @@ function CheckOutContent() {
                                       disabled={unit.availableQuantity === 0}
                                     >
                                       <ShoppingCart className="mr-2 h-4 w-4" />
-                                      Select for Checkout
+                                      Quick Checkout
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        addToCart(unit, 1);
+                                      }}
+                                      disabled={unit.availableQuantity === 0}
+                                    >
+                                      <ShoppingCart className="mr-2 h-4 w-4" />
+                                      Add to Cart
                                     </DropdownMenuItem>
                                     <DropdownMenuItem
                                       onClick={(e) => {
@@ -753,26 +862,6 @@ function CheckOutContent() {
                       min={1}
                       value={quantity}
                       onChange={(e) => setQuantity(e.target.value)}
-                    />
-                  </div>
-
-                  <div className="space-y-3">
-                    <Label htmlFor="patient-name" className="text-base font-semibold">Patient Name (Optional)</Label>
-                    <Input
-                      id="patient-name"
-                      placeholder="Enter patient or recipient name"
-                      value={patientName}
-                      onChange={(e) => setPatientName(e.target.value)}
-                    />
-                  </div>
-
-                  <div className="space-y-3">
-                    <Label htmlFor="patient-ref" className="text-base font-semibold">Patient Reference ID (Optional)</Label>
-                    <Input
-                      id="patient-ref"
-                      placeholder="Patient identifier or code"
-                      value={patientReference}
-                      onChange={(e) => setPatientReference(e.target.value)}
                     />
                   </div>
 
@@ -1029,6 +1118,108 @@ function CheckOutContent() {
           title="Scan DaanaRX QR Code"
           description="Scan the QR code on the medication unit to check it out"
         />
+
+        {/* Cart Dialog */}
+        <Dialog open={showCart} onOpenChange={setShowCart}>
+          <DialogContent className="max-w-[calc(100vw-2rem)] sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <ShoppingCart className="h-5 w-5" />
+                Checkout Cart ({getTotalCartItems()} items)
+              </DialogTitle>
+              <DialogDescription>
+                Review items and complete checkout
+              </DialogDescription>
+            </DialogHeader>
+
+            {cart.length === 0 ? (
+              <div className="py-8 text-center text-muted-foreground">
+                <ShoppingCart className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                <p>Your cart is empty</p>
+                <p className="text-sm mt-2">Search for medications and add them to your cart</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Medication</TableHead>
+                      <TableHead className="w-[100px]">Qty</TableHead>
+                      <TableHead className="w-[60px]"></TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {cart.map((item) => (
+                      <TableRow key={item.unit.unitId}>
+                        <TableCell>
+                          <div className="space-y-1">
+                            <p className="font-semibold text-sm">{item.unit.drug.medicationName}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {item.unit.drug.strength} {item.unit.drug.strengthUnit}
+                            </p>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Input
+                            type="number"
+                            min={1}
+                            max={item.unit.availableQuantity}
+                            value={item.quantity}
+                            onChange={(e) => updateCartQuantity(item.unit.unitId, parseInt(e.target.value) || 1)}
+                            className="h-8 w-16"
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => removeFromCart(item.unit.unitId)}
+                            className="h-8 w-8 p-0 text-destructive"
+                          >
+                            ×
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+
+                <Separator />
+
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-muted-foreground">Total Items: {getTotalCartItems()}</p>
+                    <p className="text-sm text-muted-foreground">Total Quantity: {getTotalCartQuantity()}</p>
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  <Label htmlFor="cart-notes">Notes (Optional)</Label>
+                  <Textarea
+                    id="cart-notes"
+                    placeholder="Any notes for this checkout"
+                    value={notes}
+                    onChange={(e) => setNotes(e.target.value)}
+                    className="min-h-[80px]"
+                  />
+                </div>
+              </div>
+            )}
+
+            <DialogFooter className="flex-col gap-2 sm:flex-row">
+              <Button variant="outline" onClick={() => setShowCart(false)}>
+                Continue Shopping
+              </Button>
+              <Button
+                onClick={handleBatchCheckout}
+                disabled={cart.length === 0 || batchCheckingOut}
+              >
+                {batchCheckingOut && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Checkout All ({getTotalCartQuantity()} units)
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </AppShell>
   );

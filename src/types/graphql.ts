@@ -4,12 +4,60 @@
 export interface DrugData {
   drugId?: string;
   medicationName: string;
-  genericName: string;
+  genericName?: string | null;
   strength: number;
   strengthUnit: string;
-  ndcId: string;
+  ndcId?: string | null;
   form: string;
   inInventory?: boolean;
+}
+
+// Batch check-in types
+export interface BatchCheckInInput {
+  lotId: string;
+  medicationName: string;
+  dosage: string;
+  quantity: number;
+  expiryDate?: string | null;
+  manufacturerLotNumber?: string | null;
+}
+
+export interface BatchCreatedUnit {
+  unitId: string;
+  qrCode: string;
+  totalQuantity: number;
+  availableQuantity: number;
+  expiryDate?: string | null;
+  drug: {
+    medicationName: string;
+    strength: number;
+    strengthUnit: string;
+    form: string;
+  };
+}
+
+// Batch check-out types
+export interface BatchCheckOutItem {
+  unitId: string;
+  quantity: number;
+}
+
+export interface BatchCheckOutResult {
+  transactions: TransactionData[];
+  totalItems: number;
+  totalQuantity: number;
+}
+
+// Clinic with settings
+export interface ClinicWithSettings {
+  clinicId: string;
+  name: string;
+  primaryColor?: string | null;
+  secondaryColor?: string | null;
+  logoUrl?: string | null;
+  requireLotLocation?: boolean;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface LocationData {
@@ -22,7 +70,8 @@ export interface LocationData {
 
 export interface LotData {
   lotId: string;
-  source: string;
+  source?: string | null;
+  lotCode?: string | null;
   note?: string | null;
   dateCreated: string;
   locationId: string;
@@ -52,8 +101,6 @@ export interface TransactionData {
   timestamp: string;
   type: 'check_in' | 'check_out' | 'adjust';
   quantity: number;
-  patientName?: string | null;
-  patientReferenceId?: string | null;
   notes?: string | null;
 }
 
@@ -80,6 +127,18 @@ export interface SearchDrugByNDCResponse {
 
 export interface SearchDrugsResponse {
   searchDrugs: DrugData[];
+}
+
+export interface SearchMedicationsByNameResponse {
+  searchMedicationsByName: DrugData[];
+}
+
+export interface BatchCreateUnitsResponse {
+  batchCreateUnits: BatchCreatedUnit[];
+}
+
+export interface BatchCheckOutUnitsResponse {
+  batchCheckOutUnits: BatchCheckOutResult;
 }
 
 export interface GetUnitResponse {
