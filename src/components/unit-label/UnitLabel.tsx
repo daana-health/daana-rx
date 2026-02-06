@@ -3,11 +3,11 @@ import { QRCodeSVG } from 'qrcode.react';
 type UnitLabelProps = {
   unitId: string;
   medicationName: string;
-  genericName: string;
-  strength: number | string;
-  strengthUnit: string;
-  form: string;
-  ndcId: string;
+  genericName?: string | null;
+  strength?: number | string | null;
+  strengthUnit?: string | null;
+  form?: string | null;
+  ndcId?: string | null;
   manufacturerLotNumber?: string | null;
   availableQuantity: number | string;
   totalQuantity: number | string;
@@ -107,16 +107,22 @@ export function UnitLabel({
         <div style={{ fontSize: '12px', fontWeight: 'bold', lineHeight: 1.1, marginBottom: '1px' }}>
           {medicationName}
         </div>
-        <div style={{ fontSize: '9px', color: '#666', marginBottom: '3px' }}>({genericName})</div>
+        {genericName && (
+          <div style={{ fontSize: '9px', color: '#666', marginBottom: '3px' }}>({genericName})</div>
+        )}
 
-        <div style={{ fontSize: '10px', fontWeight: 600, marginBottom: '3px' }}>
-          {strength} {strengthUnit} - {form}
-        </div>
+        {(strength || form) && (
+          <div style={{ fontSize: '10px', fontWeight: 600, marginBottom: '3px' }}>
+            {strength && strengthUnit ? `${strength} ${strengthUnit}` : ''}{strength && form ? ' - ' : ''}{form || ''}
+          </div>
+        )}
 
-        <div style={{ marginBottom: '2px', fontSize: '8px' }}>
-          <span style={{ fontWeight: 600 }}>NDC: </span>
-          {ndcId}
-        </div>
+        {ndcId && (
+          <div style={{ marginBottom: '2px', fontSize: '8px' }}>
+            <span style={{ fontWeight: 600 }}>NDC: </span>
+            {ndcId}
+          </div>
+        )}
 
         <div style={{ marginBottom: '2px', fontSize: '8px' }}>
           <span style={{ fontWeight: 600 }}>Mfr Lot#: </span>
