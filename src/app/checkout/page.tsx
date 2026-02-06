@@ -624,7 +624,7 @@ function CheckOutContent() {
                             </div>
 
                             <div className="flex items-center justify-between pt-2 border-t">
-                              <span className="text-xs text-muted-foreground truncate max-w-[150px]" title={unit.lot?.source}>
+                              <span className="text-xs text-muted-foreground truncate max-w-[150px]" title={unit.lot?.source ?? undefined}>
                                 {unit.lot?.source || 'No source'}
                               </span>
                               <Button
